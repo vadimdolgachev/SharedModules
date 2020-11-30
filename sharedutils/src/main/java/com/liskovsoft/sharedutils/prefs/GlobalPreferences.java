@@ -38,8 +38,12 @@ public class GlobalPreferences extends SharedPreferencesBase {
         return sInstance;
     }
 
-    public static void setOnInit(Runnable callback) {
-        sCallbacks.add(callback);
+    public static void setOnInitOrNow(Runnable callback) {
+        if (sInstance == null) {
+            sCallbacks.add(callback);
+        } else {
+            callback.run();
+        }
     }
 
     public void setRawAuthData(String data) {
