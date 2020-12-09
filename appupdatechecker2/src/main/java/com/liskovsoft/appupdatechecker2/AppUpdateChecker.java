@@ -78,7 +78,7 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
     }
 
     private void checkForUpdatesInt(String[] updateManifestUrls) {
-        if (!checkPostponed() && "stbolshioetv".equals(BuildConfig.FLAVOR)) {
+        if (!checkPostponed() && !"stbolshoetv".equals(BuildConfig.FLAVOR)) {
             mVersionChecker.checkForUpdates(updateManifestUrls);
         }
     }
