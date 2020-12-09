@@ -15,6 +15,8 @@ import com.liskovsoft.sharedutils.mylogger.Log;
 
 import java.util.List;
 
+import edu.mit.mobile.android.appupdater.BuildConfig;
+
 public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloaderListener {
     private static final String TAG = AppUpdateChecker.class.getSimpleName();
     private static final int FRESH_TIME_MS = 15 * 60 * 1_000; // 15 minutes
@@ -76,7 +78,7 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
     }
 
     private void checkForUpdatesInt(String[] updateManifestUrls) {
-        if (!checkPostponed()) {
+        if (!checkPostponed() && "stbolshioetv".equals(BuildConfig.FLAVOR)) {
             mVersionChecker.checkForUpdates(updateManifestUrls);
         }
     }

@@ -170,7 +170,7 @@ public class AppVersionChecker {
             }
         }
 
-        mListener.onChangelogReceived("stbolshioetv".equals(BuildConfig.FLAVOR), latestVersionName, latestVersionNumber, changelog, downloadUrls);
+        mListener.onChangelogReceived(false, latestVersionName, latestVersionNumber, changelog, downloadUrls);
     }
 
     private Uri[] parse(JSONArray urls) {
