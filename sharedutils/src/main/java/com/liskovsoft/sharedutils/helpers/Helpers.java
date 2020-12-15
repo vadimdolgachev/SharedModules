@@ -31,7 +31,6 @@ import android.view.WindowManager;
 import android.view.WindowManager.LayoutParams;
 import android.view.inputmethod.InputMethodManager;
 import androidx.annotation.Nullable;
-import androidx.fragment.app.FragmentActivity;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -159,6 +158,14 @@ public final class Helpers {
 
     public static String toString(InputStream content) {
         return FileHelpers.toString(content);
+    }
+
+    public static String toString(Object obj) {
+        if (obj == null) {
+            return null;
+        }
+
+        return obj.toString();
     }
 
     public static InputStream toStream(String content) {
@@ -826,19 +833,19 @@ public final class Helpers {
     }
 
     public static String[] splitArray(String arr) {
-        return Helpers.split("\\|", arr);
+        return Helpers.split("%AR%", arr);
     }
 
     public static String mergeArray(Object... items) {
-        return Helpers.merge("|", items);
+        return Helpers.merge("%AR%", items);
     }
 
     public static String[] splitObject(String obj) {
-        return Helpers.split(",", obj);
+        return Helpers.split("%OB%", obj);
     }
 
     public static String mergeObject(Object... params) {
-        return Helpers.merge(",", params);
+        return Helpers.merge("%OB%", params);
     }
 
     private static String[] split(String delim, String data) {
@@ -922,5 +929,9 @@ public final class Helpers {
         TypedValue outValue = new TypedValue();
         context.getTheme().resolveAttribute(attrName, outValue, true);
         return outValue.resourceId;
+    }
+
+    public static <T> T get(T obj, T defObj) {
+        return obj != null ? obj : defObj;
     }
 }
