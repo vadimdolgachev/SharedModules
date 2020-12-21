@@ -2,15 +2,13 @@ package com.liskovsoft.appupdatechecker2.other;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import com.liskovsoft.sharedutils.helpers.Helpers;
 import com.liskovsoft.sharedutils.mylogger.Log;
 import edu.mit.mobile.android.appupdater.R;
 
 public class SettingsManager {
-    public static final long CHECK_INTERVAL_DEFAULT = 60 * 60 * 1_000;
+    public static final long CHECK_INTERVAL_DEFAULT_MS = 60 * 1_000;
     private static final String TAG = SettingsManager.class.getSimpleName();
     private static final String SHARED_PREFERENCES_NAME = "com.liskovsoft.appupdatechecker2.preferences";
-    private static final String PREF_ENABLED = "enabled";
     private static final String PREF_CHECK_INTERVAL_MS = "check_interval_ms";
     private static final String PREF_LAST_CHECKED_MS = "last_checked_ms";
     private static final String PREF_APK_PATH = "apk_path";
@@ -65,18 +63,10 @@ public class SettingsManager {
 
     public long getMinIntervalMs() {
         String interval = mPrefs.getString(PREF_CHECK_INTERVAL_MS, null);
-        return interval != null ? Long.parseLong(interval) : CHECK_INTERVAL_DEFAULT;
+        return interval != null ? Long.parseLong(interval) : CHECK_INTERVAL_DEFAULT_MS;
     }
 
     public void setMinIntervalMs(long milliseconds) {
         mPrefs.edit().putString(PREF_CHECK_INTERVAL_MS, String.valueOf(milliseconds)).apply();
-    }
-
-    public boolean isEnabled() {
-        return mPrefs.getBoolean(PREF_ENABLED, true);
-    }
-
-    public void setEnabled(boolean enabled) {
-        mPrefs.edit().putBoolean(PREF_ENABLED, enabled).apply();
     }
 }

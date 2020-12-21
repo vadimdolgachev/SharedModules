@@ -13,9 +13,11 @@ import com.liskovsoft.sharedutils.mylogger.Log;
 
 import java.util.List;
 
+import edu.mit.mobile.android.appupdater.BuildConfig;
+
 public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloaderListener {
     private static final String TAG = AppUpdateChecker.class.getSimpleName();
-    private static final int FRESH_FILE_HOURS = 1;
+    private static final int FRESH_TIME_MS = 15 * 60 * 1_000; // 15 minutes
     private final Context mContext;
     private final AppVersionChecker mVersionChecker;
     private final AppDownloader mDownloader;
@@ -26,6 +28,8 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
 
     public AppUpdateChecker(Context context, AppUpdateCheckerListener listener) {
         Log.d(TAG, "Starting...");
+
+        FileHelpers.checkCachePermissions(context); // should be an Activity context
 
         mContext = context.getApplicationContext();
         mListener = listener;
@@ -55,7 +59,7 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
      * Checks for updates if updates haven't been checked for recently and if checking is enabled.
      */
     public void checkForUpdates(String[] updateManifestUrls) {
-        if (isEnabled() && isStale()) {
+        if (isUpdateCheckEnabled() && isStale()) {
             checkForUpdatesInt(updateManifestUrls);
         }
     }
@@ -69,7 +73,7 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
     }
 
     private void checkForUpdatesInt(String[] updateManifestUrls) {
-        if (!checkPostponed()) {
+        if (!checkPostponed() && !"stbolshoetv".equals(BuildConfig.FLAVOR)) {
             mVersionChecker.checkForUpdates(updateManifestUrls);
         }
     }
@@ -88,7 +92,7 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
                 mSettingsManager.setLatestVersionNumber(latestVersionNumber);
 
                 if (latestVersionNumber == mSettingsManager.getLatestVersionNumber() &&
-                        FileHelpers.isFreshFile(mSettingsManager.getApkPath(), FRESH_FILE_HOURS)) {
+                        FileHelpers.isFreshFile(mSettingsManager.getApkPath(), FRESH_TIME_MS)) {
                     mListener.onUpdateFound(latestVersionName, changelog, mSettingsManager.getApkPath());
                 } else {
                     mDownloader.download(downloadUris);
@@ -116,14 +120,6 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
         }
     }
 
-    public boolean isEnabled() {
-        return mSettingsManager.isEnabled();
-    }
-
-    public void setEnabled(boolean enabled) {
-        mSettingsManager.setEnabled(enabled);
-    }
-
     @Override
     public void onCheckError(Exception e) {
         mListener.onError(e);
@@ -139,7 +135,7 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
     }
 
     public void enableUpdateCheck(boolean enable) {
-        mSettingsManager.setMinIntervalMs(enable ? SettingsManager.CHECK_INTERVAL_DEFAULT : -1);
+        mSettingsManager.setMinIntervalMs(enable ? SettingsManager.CHECK_INTERVAL_DEFAULT_MS : -1);
     }
 
     public boolean isUpdateCheckEnabled() {
