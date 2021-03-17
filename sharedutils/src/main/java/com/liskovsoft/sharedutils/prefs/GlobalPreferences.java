@@ -40,7 +40,11 @@ public class GlobalPreferences extends SharedPreferencesBase {
     }
 
     public static void setOnInit(Runnable callback) {
-        sCallbacks.add(callback);
+        if (sInstance == null) {
+            sCallbacks.add(callback);
+        } else {
+            callback.run();
+        }
     }
 
     public void setRawAuthData(String data) {
