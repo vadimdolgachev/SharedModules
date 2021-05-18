@@ -3,6 +3,7 @@ package com.liskovsoft.sharedutils.helpers;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
+import android.bluetooth.BluetoothAdapter;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
@@ -42,6 +43,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.net.URLEncoder;
 import java.text.DateFormat;
@@ -51,15 +53,21 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class Helpers {
-    private static HashMap<String, List<String>> sCache = new HashMap<>();
+    private static final String ARRAY_DELIM = "%AR%";
+    private static final String OBJECT_DELIM = "%OB%";
+    private static final String LEGACY_ARRAY_DELIM = "|";
+    private static final String LEGACY_OBJECT_DELIM = ",";
     public static final int REMOVE_PACKAGE_CODE = 521;
+    private static HashMap<String, List<String>> sCache = new HashMap<>();
 
     /**
      * Simple wildcard matching routine. Implemented without regex. So you may expect huge performance boost.
@@ -99,6 +107,12 @@ public final class Helpers {
 
     public static String getDeviceName() {
         return String.format("%s (%s)", Build.MODEL, Build.PRODUCT);
+    }
+
+    public static String getUserDeviceName() {
+        BluetoothAdapter myDevice = BluetoothAdapter.getDefaultAdapter();
+
+        return myDevice != null ? myDevice.getName() : Build.MODEL;
     }
 
     public static String getAndroidVersion() {
@@ -160,12 +174,33 @@ public final class Helpers {
         return FileHelpers.toString(content);
     }
 
+    public static String toString(Intent intent) {
+        return dumpIntent(intent);
+    }
+
     public static String toString(Object obj) {
         if (obj == null) {
             return null;
         }
 
         return obj.toString();
+    }
+
+    public static String toString(float num) {
+        if (num % 1.0 != 0) {
+            return String.valueOf(num);
+        } else {
+            return String.valueOf((int) num);
+        }
+    }
+
+    public static String toIntString(Object floatOrIntString) {
+        if (floatOrIntString == null) {
+            return null;
+        }
+
+        float val = Float.parseFloat(String.valueOf(floatOrIntString));
+        return String.valueOf((int) val);
     }
 
     public static InputStream toStream(String content) {
@@ -305,15 +340,6 @@ public final class Helpers {
         return gson.fromJson(jsonContent, type);
     }
 
-    public static String toIntString(Object floatOrIntString) {
-        if (floatOrIntString == null) {
-            return null;
-        }
-
-        float val = Float.parseFloat(String.valueOf(floatOrIntString));
-        return String.valueOf((int) val);
-    }
-
     /**
      * Return true to first matched string from the array
      * @param fullStr full string
@@ -431,6 +457,21 @@ public final class Helpers {
         return first.equals(second);
     }
 
+    public static boolean contains(String first, String second) {
+        if (first == null && second == null) {
+            return true;
+        }
+
+        if (first == null || second == null) {
+            return false;
+        }
+
+        first = first.toLowerCase();
+        second = second.toLowerCase();
+
+        return first.contains(second) || second.contains(first);
+    }
+
     public static boolean isDash(String id) {
         if (!Helpers.isNumeric(id)) {
             return false;
@@ -501,8 +542,13 @@ public final class Helpers {
             return;
         }
 
-        Intent intent = new Intent(Intent.ACTION_VIEW);
         Uri file = FileHelpers.getFileUri(context, packagePath);
+
+        if (file == null) {
+            return;
+        }
+
+        Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setDataAndType(file, "application/vnd.android.package-archive");
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION); // without this flag android returned a intent error!
 
@@ -723,7 +769,13 @@ public final class Helpers {
         try {
             Field f1 = getDeclaredField(these.getClass(), fieldName);
             if (f1 != null) {
+                // Change private modifier to public
                 f1.setAccessible(true);
+                // Remove final modifier (don't working!!!)
+                //Field modifiersField = Field.class.getDeclaredField("modifiers");
+                //modifiersField.setAccessible(true);
+                //modifiersField.setInt(f1, f1.getModifiers() & ~Modifier.FINAL);
+                // Set field (at last)
                 f1.set(these, value);
             }
         } catch (Exception e) {
@@ -768,6 +820,14 @@ public final class Helpers {
         }
 
         return Integer.parseInt(numString);
+    }
+
+    public static long parseLong(String numString) {
+        if (!isInteger(numString)) {
+            return -1;
+        }
+
+        return Long.parseLong(numString);
     }
 
     public static float parseFloat(String numString) {
@@ -832,20 +892,28 @@ public final class Helpers {
         return !floatEquals(result, -1) ? result : defaultValue;
     }
 
+    public static String[] splitArrayLegacy(String arr) {
+        return splitArrayLegacy(split(ARRAY_DELIM, arr), arr);
+    }
+
     public static String[] splitArray(String arr) {
-        return Helpers.split("%AR%", arr);
+        return split(ARRAY_DELIM, arr);
     }
 
     public static String mergeArray(Object... items) {
-        return Helpers.merge("%AR%", items);
+        return Helpers.merge(ARRAY_DELIM, items);
+    }
+
+    public static String[] splitObjectLegacy(String obj) {
+        return splitObjectLegacy(split(OBJECT_DELIM, obj), obj);
     }
 
     public static String[] splitObject(String obj) {
-        return Helpers.split("%OB%", obj);
+        return split(OBJECT_DELIM, obj);
     }
 
     public static String mergeObject(Object... params) {
-        return Helpers.merge("%OB%", params);
+        return Helpers.merge(OBJECT_DELIM, params);
     }
 
     private static String[] split(String delim, String data) {
@@ -853,7 +921,7 @@ public final class Helpers {
             return null;
         }
 
-        return data.split(delim);
+        return data.split(Pattern.quote(delim));
     }
 
     private static String merge(String delim, Object... params) {
@@ -874,7 +942,7 @@ public final class Helpers {
         return sb.toString();
     }
 
-    public static void openLink(String url, Context context) {
+    public static void openLink(Context context, String url) {
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         // Fix: Calling startActivity() from outside of an Activity  context requires the FLAG_ACTIVITY_NEW_TASK flag
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -931,7 +999,77 @@ public final class Helpers {
         return outValue.resourceId;
     }
 
-    public static <T> T get(T obj, T defObj) {
+    public static <T> T firstNonNull(T obj, T defObj) {
         return obj != null ? obj : defObj;
+    }
+
+    private static String[] splitArrayLegacy(String[] split, String arr) {
+        if (split != null && split.length == 1) {
+            return split(LEGACY_ARRAY_DELIM, arr);
+        }
+
+        return split;
+    }
+
+    private static String[] splitObjectLegacy(String[] split, String obj) {
+        if (split != null && split.length == 1) {
+            return split(LEGACY_OBJECT_DELIM, obj);
+        }
+
+        return split;
+    }
+
+    public static int[] range(int start, int end, int step) {
+        int size = (Math.abs(start) + Math.abs(end)) / step + 1;
+        int[] result = new int[size];
+        int value = start;
+
+        for (int i = 0; i < size; i++) {
+             result[i] = value;
+             value += step;
+        }
+
+        return result;
+    }
+
+    /**
+     * Creates map from string array resource. Uses '|' as delimiter.
+     * @return key/value map
+     */
+    public static Map<String, String> getMap(Context context, int arrayResId) {
+        return getMap(context.getResources().getStringArray(arrayResId), "|", new LinkedHashMap<>());
+    }
+
+    /**
+     * Creates map from string array. Uses any string as delimiter.
+     * @return key/value map
+     */
+    public static Map<String, String> getMap(String[] array, String delim, Map<String, String> defaultMap) {
+        for (String item : array) {
+            StringTokenizer tokenizer = new StringTokenizer(item, delim);
+            String key = tokenizer.nextToken();
+            String value = tokenizer.nextToken();
+            defaultMap.put(key, value);
+        }
+        return defaultMap;
+    }
+
+    /**
+     * Non-negative hash code generator.
+     */
+    public static int hashCode(Object... items) {
+        if (items == null || items.length == 0) {
+            return -1;
+        }
+
+        int hash = 0;
+
+        for (Object item : items) {
+            if (item != null) {
+                hash = 31 * hash + Math.abs(item.hashCode());
+            }
+        }
+
+        return hash;
     }
 }

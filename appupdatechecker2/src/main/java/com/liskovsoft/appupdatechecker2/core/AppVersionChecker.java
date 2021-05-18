@@ -9,8 +9,6 @@ import com.liskovsoft.appupdatechecker2.other.downloadmanager.DownloadManager;
 import com.liskovsoft.appupdatechecker2.other.downloadmanager.DownloadManager.MyRequest;
 import com.liskovsoft.sharedutils.locale.LocaleUtility;
 import com.liskovsoft.sharedutils.mylogger.Log;
-
-import edu.mit.mobile.android.appupdater.BuildConfig;
 import edu.mit.mobile.android.utils.StreamUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
