@@ -43,6 +43,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.net.URLEncoder;
 import java.text.DateFormat;
@@ -52,9 +53,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -539,8 +542,13 @@ public final class Helpers {
             return;
         }
 
-        Intent intent = new Intent(Intent.ACTION_VIEW);
         Uri file = FileHelpers.getFileUri(context, packagePath);
+
+        if (file == null) {
+            return;
+        }
+
+        Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setDataAndType(file, "application/vnd.android.package-archive");
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION); // without this flag android returned a intent error!
 
@@ -761,7 +769,13 @@ public final class Helpers {
         try {
             Field f1 = getDeclaredField(these.getClass(), fieldName);
             if (f1 != null) {
+                // Change private modifier to public
                 f1.setAccessible(true);
+                // Remove final modifier (don't working!!!)
+                //Field modifiersField = Field.class.getDeclaredField("modifiers");
+                //modifiersField.setAccessible(true);
+                //modifiersField.setInt(f1, f1.getModifiers() & ~Modifier.FINAL);
+                // Set field (at last)
                 f1.set(these, value);
             }
         } catch (Exception e) {
@@ -1016,5 +1030,46 @@ public final class Helpers {
         }
 
         return result;
+    }
+
+    /**
+     * Creates map from string array resource. Uses '|' as delimiter.
+     * @return key/value map
+     */
+    public static Map<String, String> getMap(Context context, int arrayResId) {
+        return getMap(context.getResources().getStringArray(arrayResId), "|", new LinkedHashMap<>());
+    }
+
+    /**
+     * Creates map from string array. Uses any string as delimiter.
+     * @return key/value map
+     */
+    public static Map<String, String> getMap(String[] array, String delim, Map<String, String> defaultMap) {
+        for (String item : array) {
+            StringTokenizer tokenizer = new StringTokenizer(item, delim);
+            String key = tokenizer.nextToken();
+            String value = tokenizer.nextToken();
+            defaultMap.put(key, value);
+        }
+        return defaultMap;
+    }
+
+    /**
+     * Non-negative hash code generator.
+     */
+    public static int hashCode(Object... items) {
+        if (items == null || items.length == 0) {
+            return -1;
+        }
+
+        int hash = 0;
+
+        for (Object item : items) {
+            if (item != null) {
+                hash = 31 * hash + Math.abs(item.hashCode());
+            }
+        }
+
+        return hash;
     }
 }
