@@ -14,27 +14,32 @@ import java.util.Locale;
 public class Analytics {
     private static final String TAG = "Analytics";
     private final static String ACTION_YOUTUBE_ACTIVITY_STARTED = "ACTION_YOUTUBE_ACTIVITY_STARTED";
-    private final static String ACTION_YOUTUBE_VIDEO_START = "ACTION_YOUTUBE_VIDEO_START";
+    private final static String ACTION_YOUTUBE_VIDEO_STARTING = "ACTION_YOUTUBE_VIDEO_STARTING";
+    private final static String ACTION_YOUTUBE_VIDEO_STARTED = "ACTION_YOUTUBE_VIDEO_STARTED";
     private final static String ACTION_YOUTUBE_VIDEO_START_ERROR = "ACTION_YOUTUBE_VIDEO_START_ERROR";
     private static final String ACTION_APP_UNCAUGHT_EXCEPTION = "ACTION_APP_UNCAUGHT_EXCEPTION";
 
     public static void sendActivityStarted(@NonNull Context context, String activityName) {
-        Log.d("Analytics", "sendActivityStarted: " + activityName);
         final Intent intent = createIntent(ACTION_YOUTUBE_ACTIVITY_STARTED, getPackageInfo(context));
         intent.putExtra("activity_name", activityName);
         context.sendBroadcast(intent);
     }
 
-    public static void sendVideoStart(@NonNull Context context, @NonNull String videoId, String videoName) {
-        Log.d(TAG, "sendVideoStart() called with: context = [" + context + "], videoId = [" + videoId + "], videoName = [" + videoName + "]");
-        final Intent intent = createIntent(ACTION_YOUTUBE_VIDEO_START, getPackageInfo(context));
+    public static void sendVideoStarting(@NonNull Context context, @NonNull String videoId, String videoName) {
+        final Intent intent = createIntent(ACTION_YOUTUBE_VIDEO_STARTING, getPackageInfo(context));
+        intent.putExtra("video_id", videoId);
+        intent.putExtra("video_name", videoName);
+        context.sendBroadcast(intent);
+    }
+
+    public static void sendVideoStarted(@NonNull Context context, @NonNull String videoId, String videoName) {
+        final Intent intent = createIntent(ACTION_YOUTUBE_VIDEO_STARTED, getPackageInfo(context));
         intent.putExtra("video_id", videoId);
         intent.putExtra("video_name", videoName);
         context.sendBroadcast(intent);
     }
 
     public static void sendVideoStartError(@NonNull Context context, @NonNull String videoId, String videoName, String errorMessage) {
-        Log.d(TAG, "sendVideoStartError() called with: context = [" + context + "], videoId = [" + videoId + "], videoName = [" + videoName + "], errorMessage = [" + errorMessage + "]");
         final Intent intent = createIntent(ACTION_YOUTUBE_VIDEO_START_ERROR, getPackageInfo(context));
         intent.putExtra("video_id", videoId);
         intent.putExtra("video_name", videoName);
