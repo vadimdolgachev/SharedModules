@@ -45,6 +45,8 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.text.DateFormat;
@@ -474,6 +476,21 @@ public final class Helpers {
         second = second.toLowerCase();
 
         return first.contains(second) || second.contains(first);
+    }
+
+    public static boolean startsWith(String word, String prefix) {
+        if (word == null && prefix == null) {
+            return true;
+        }
+
+        if (word == null || prefix == null) {
+            return false;
+        }
+
+        word = word.toLowerCase();
+        prefix = prefix.toLowerCase();
+
+        return word.startsWith(prefix);
     }
 
     public static boolean isDash(String id) {
@@ -1097,5 +1114,18 @@ public final class Helpers {
             e.printStackTrace();
         }
         return anyString;
+    }
+
+    public static String getHost(String url) {
+        String result = null;
+
+        try {
+            URI uri = new URI(url);
+            result = uri.getHost();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+
+        return result;
     }
 }
