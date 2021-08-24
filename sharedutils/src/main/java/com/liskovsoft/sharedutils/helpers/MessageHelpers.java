@@ -22,11 +22,11 @@ public class MessageHelpers {
     private static float sTextSize;
 
     public static void showMessage(final Context ctx, final String TAG, final Throwable ex) {
-        showMessage(ctx, TAG, Helpers.toString(ex));
+        showMessage(ctx, TAG + ": %s", Helpers.toString(ex));
     }
 
-    public static void showMessage(final Context ctx, final String TAG, final String msg) {
-        showMessage(ctx, String.format("%s: %s", TAG, msg));
+    public static void showMessage(final Context ctx, final String template, Object... params) {
+        showMessage(ctx, String.format(template, params));
     }
 
     public static void showMessageThrottled(final Context ctx, final String msg) {
@@ -43,7 +43,7 @@ public class MessageHelpers {
     }
 
     public static void showMessage(final Context ctx, final String msg) {
-        if (ctx == null) {
+        if (ctx == null || msg == null || msg.isEmpty()) {
             return;
         }
 
@@ -110,9 +110,9 @@ public class MessageHelpers {
         }
     }
 
-    public static void showLongMessage(Context ctx, String TAG, String msg) {
+    public static void showLongMessage(Context ctx, String template, Object... params) {
         for (int i = 0; i < 3; i++) {
-            showMessage(ctx, TAG, msg);
+            showMessage(ctx, template, params);
         }
     }
 

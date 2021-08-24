@@ -16,6 +16,8 @@ import android.content.pm.ResolveInfo;
 import android.content.res.Configuration;
 import android.graphics.Point;
 import android.media.AudioManager;
+import android.media.MediaCodecInfo;
+import android.media.MediaCodecList;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Build.VERSION;
@@ -35,6 +37,7 @@ import android.view.inputmethod.InputMethodManager;
 import androidx.annotation.Nullable;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.liskovsoft.sharedutils.mylogger.Log;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -44,7 +47,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -55,12 +57,17 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -411,6 +418,14 @@ public final class Helpers {
         return VERSION.SDK_INT >= 24 && context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE);
     }
 
+    public static boolean isTouchSupported(Context context) {
+        if (context == null) {
+            return false;
+        }
+
+        return context.getPackageManager().hasSystemFeature("android.hardware.touchscreen");
+    }
+
     public static boolean isAndroidTV(Context context) {
         PackageManager pm = context.getPackageManager();
 
@@ -460,6 +475,20 @@ public final class Helpers {
     @SuppressLint("SourceLockedOrientationActivity")
     public static void makeActivityHorizontal(Activity activity) {
         activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+    }
+
+    public static boolean equalsAny(String orig, String... arr) {
+        if (orig == null || arr == null) {
+            return false;
+        }
+
+        for (String item : arr) {
+            if (orig.equals(item)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static boolean equals(String first, String second) {
@@ -671,6 +700,21 @@ public final class Helpers {
     }
 
     /**
+     * Don't work. Maybe need WRITE_SETTINGS permission?
+     */
+    public static void setBrightness(Activity context, float level) {
+        if (context == null) {
+            return;
+        }
+
+        context.runOnUiThread(() -> {
+            LayoutParams layoutParams = context.getWindow().getAttributes();
+            layoutParams.screenBrightness = level;
+            context.getWindow().setAttributes(layoutParams);
+        });
+    }
+
+    /**
      * Utility method to check if device is Amazon Fire TV device
      * @return {@code true} true if device is Amazon Fire TV device.
      */
@@ -769,12 +813,23 @@ public final class Helpers {
                url.startsWith("youtube://");
     }
 
-    public static void showKeyboard(Context context){
+    /**
+     * https://stackoverflow.com/questions/5105354/how-to-show-soft-keyboard-when-edittext-is-focused
+     */
+    public static void showKeyboard(@Nullable Context context) {
+        if (context == null) {
+            return;
+        }
+
         InputMethodManager inputMethodManager = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
         inputMethodManager.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
     }
 
-    public static void hideKeyboard(Context context, View view){
+    public static void hideKeyboard(@Nullable Context context, View view) {
+        if (context == null) {
+            return;
+        }
+
         InputMethodManager inputMethodManager = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
         inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
     }
@@ -799,6 +854,24 @@ public final class Helpers {
         }
 
         return oldVal.matcher(content).replaceFirst(newVal);
+    }
+
+    public static void setField(Object these, String fieldName, int value) {
+        try {
+            Field f1 = getDeclaredField(these.getClass(), fieldName);
+            if (f1 != null) {
+                // Change private modifier to public
+                f1.setAccessible(true);
+                // Remove final modifier (don't working!!!)
+                //Field modifiersField = Field.class.getDeclaredField("modifiers");
+                //modifiersField.setAccessible(true);
+                //modifiersField.setInt(f1, f1.getModifiers() & ~Modifier.FINAL);
+                // Set field (at last)
+                f1.setInt(these, value);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public static void setField(Object these, String fieldName, Object value) {
@@ -990,7 +1063,7 @@ public final class Helpers {
         }
     }
 
-    public static boolean contains(Object[] arr, Object item) {
+    public static boolean hasItem(Object[] arr, Object item) {
         if (arr == null || arr.length == 0) {
             return false;
         }
@@ -1004,7 +1077,7 @@ public final class Helpers {
         return false;
     }
 
-    public static boolean contains(int[] arr, int item) {
+    public static boolean hasItem(int[] arr, int item) {
         if (arr == null || arr.length == 0) {
             return false;
         }
@@ -1091,7 +1164,7 @@ public final class Helpers {
     }
 
     /**
-     * Non-negative hash code generator.
+     * Positive hash code generator.
      */
     public static int hashCode(Object... items) {
         if (items == null || items.length == 0) {
@@ -1102,11 +1175,11 @@ public final class Helpers {
 
         for (Object item : items) {
             if (item != null) {
-                hash = 31 * hash + Math.abs(item.hashCode());
+                hash = 31 * hash + item.hashCode();
             }
         }
 
-        return hash;
+        return Math.abs(hash);
     }
 
     public static String decode(String urlDecoded) {
@@ -1138,5 +1211,106 @@ public final class Helpers {
         }
 
         return result;
+    }
+
+    public interface Filter<T> {
+        boolean test(T value);
+    }
+
+    /**
+     * Predicate replacement function for devices with Android 6.0 and below.
+     */
+    public static <T> T removeIf(Collection<T> collection, Filter<T> filter) {
+        if (collection == null || filter == null) {
+            return null;
+        }
+
+        T removed = null;
+        final Iterator<T> each = collection.iterator();
+        while (each.hasNext()) {
+            T next = each.next();
+            if (filter.test(next)) {
+                each.remove();
+                removed = next;
+            }
+        }
+
+        return removed;
+    }
+
+    public static <T> void removeDuplicates(List<T> list) {
+        Set<T> set = new LinkedHashSet<>(list);
+        list.clear();
+        list.addAll(set);
+    }
+
+    public static <T> T get(Collection<T> collection, int index) {
+        if (collection == null) {
+            return null;
+        }
+
+        T result = null;
+        int idx = 0;
+
+        for (T item : collection) {
+            if (idx == index) {
+                result = item;
+                break;
+            }
+
+            idx++;
+        }
+
+        return result;
+    }
+
+    public static boolean isVP9Supported() {
+        return isCodecSupported("video/x-vnd.on2.vp9");
+    }
+
+    /**
+     * <a href="https://developer.android.com/reference/android/media/MediaCodec">More info</a>
+     */
+    public static boolean isCodecSupported(String mimeType) {
+        if (VERSION.SDK_INT < 21) {
+            return false;
+        }
+
+        MediaCodecInfo[] codecInfos = new MediaCodecList(MediaCodecList.ALL_CODECS).getCodecInfos();
+
+        for (MediaCodecInfo codecInfo : codecInfos) {
+            if (codecInfo.isEncoder() || !isHardwareAccelerated(codecInfo.getName())) {
+                continue;
+            }
+
+            String[] types = codecInfo.getSupportedTypes();
+
+            for (String type : types) {
+                if (type.equalsIgnoreCase(mimeType)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * <a href="https://github.com/google/ExoPlayer/issues/4757">More info</a>
+     * @param videoCodecName name from CodecInfo
+     * @return is accelerated
+     */
+    public static boolean isHardwareAccelerated(String videoCodecName) {
+        if (videoCodecName == null) {
+            return false;
+        }
+
+        for (String name : new String[]{"omx.google.", "c2.android."}) {
+            if (videoCodecName.toLowerCase().startsWith(name)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

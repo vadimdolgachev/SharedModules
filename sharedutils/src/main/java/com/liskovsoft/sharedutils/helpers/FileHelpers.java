@@ -73,6 +73,14 @@ public class FileHelpers {
         return cacheDir;
     }
 
+    public static File getExternalFilesDir(Context context) {
+        if (context == null) {
+            return null;
+        }
+
+        return context.getExternalFilesDir(null);
+    }
+
     /**
      * Note: we cannot use an application context here
      * @param context only Activity context is supported
@@ -200,10 +208,16 @@ public class FileHelpers {
     }
 
     public static void streamToFile(InputStream is, File destination) {
+        if (is == null || destination == null) {
+            return;
+        }
+
         FileOutputStream fos = null;
 
         try {
-            destination.getParentFile().mkdirs(); // create dirs tree
+            if (destination.getParentFile() != null) {
+                destination.getParentFile().mkdirs(); // create dirs tree
+            }
             destination.createNewFile(); // create empty file
 
             fos = new FileOutputStream(destination);
@@ -213,16 +227,19 @@ public class FileHelpers {
             while ((len1 = is.read(buffer)) != -1) {
                 fos.write(buffer, 0, len1);
             }
-        } catch (FileNotFoundException ex) { // fix: open failed: EACCES (Permission denied)
-            ex.printStackTrace();
-            throw new IllegalStateException(ex);
+        } catch (FileNotFoundException ex) {
+            Log.e(TAG, "Open file failed: Seemed EACCES (Permission denied): %s", ex.getMessage());
         } catch (IOException ex) {
             ex.printStackTrace();
-            throw new IllegalStateException(ex);
+            Log.e(TAG, ex.getMessage());
         } finally {
             closeStream(fos);
             closeStream(is);
         }
+    }
+
+    public static void stringToFile(String is, File destination) {
+        streamToFile(toStream(is), destination);
     }
 
     /**
@@ -397,6 +414,14 @@ public class FileHelpers {
         return new File(path).exists();
     }
 
+    public static boolean isFileExists(File path) {
+        if (path == null) {
+            return false;
+        }
+
+        return path.exists();
+    }
+
     public static void ensureFileExists(File file) {
         if (file == null) {
             return;
@@ -439,5 +464,19 @@ public class FileHelpers {
         }
 
         return System.currentTimeMillis() - file.lastModified() < freshTimeMS;
+    }
+
+    public static String getFileContents(File source) {
+        if (source == null) {
+            return null;
+        }
+
+        String result = null;
+        try {
+            result = toString(new FileInputStream(source));
+        } catch (FileNotFoundException e) {
+            Log.e(TAG, "File not found: %s", source.getAbsolutePath());
+        }
+        return result;
     }
 }
