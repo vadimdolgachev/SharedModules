@@ -18,41 +18,48 @@ public class Analytics {
     private final static String ACTION_YOUTUBE_VIDEO_STARTED = "ACTION_YOUTUBE_VIDEO_STARTED";
     private final static String ACTION_YOUTUBE_VIDEO_START_ERROR = "ACTION_YOUTUBE_VIDEO_START_ERROR";
     private static final String ACTION_APP_UNCAUGHT_EXCEPTION = "ACTION_APP_UNCAUGHT_EXCEPTION";
+    private static PackageInfo sPackageInfo = null;
+    private static Context sContext = null;
 
-    public static void sendActivityStarted(@NonNull Context context, String activityName) {
-        final Intent intent = createIntent(ACTION_YOUTUBE_ACTIVITY_STARTED, getPackageInfo(context));
+    public static void init(@NonNull Context context) {
+        sContext = context;
+        sPackageInfo = getPackageInfo(context);
+    }
+
+    public static void sendActivityStarted(String activityName) {
+        final Intent intent = createIntent(ACTION_YOUTUBE_ACTIVITY_STARTED, sPackageInfo);
         intent.putExtra("activity_name", activityName);
-        context.sendBroadcast(intent);
+        sContext.sendBroadcast(intent);
     }
 
-    public static void sendVideoStarting(@NonNull Context context, @NonNull String videoId, String videoName) {
-        final Intent intent = createIntent(ACTION_YOUTUBE_VIDEO_STARTING, getPackageInfo(context));
+    public static void sendVideoStarting(@NonNull String videoId, String videoName) {
+        final Intent intent = createIntent(ACTION_YOUTUBE_VIDEO_STARTING, sPackageInfo);
         intent.putExtra("video_id", videoId);
         intent.putExtra("video_name", videoName);
-        context.sendBroadcast(intent);
+        sContext.sendBroadcast(intent);
     }
 
-    public static void sendVideoStarted(@NonNull Context context, @NonNull String videoId, String videoName) {
-        final Intent intent = createIntent(ACTION_YOUTUBE_VIDEO_STARTED, getPackageInfo(context));
+    public static void sendVideoStarted(@NonNull String videoId, String videoName) {
+        final Intent intent = createIntent(ACTION_YOUTUBE_VIDEO_STARTED, sPackageInfo);
         intent.putExtra("video_id", videoId);
         intent.putExtra("video_name", videoName);
-        context.sendBroadcast(intent);
+        sContext.sendBroadcast(intent);
     }
 
-    public static void sendVideoStartError(@NonNull Context context, @NonNull String videoId, String videoName, String errorMessage) {
-        final Intent intent = createIntent(ACTION_YOUTUBE_VIDEO_START_ERROR, getPackageInfo(context));
+    public static void sendVideoStartError(@NonNull String videoId, String videoName, String errorMessage) {
+        final Intent intent = createIntent(ACTION_YOUTUBE_VIDEO_START_ERROR, sPackageInfo);
         intent.putExtra("video_id", videoId);
         intent.putExtra("video_name", videoName);
         intent.putExtra("error_message", errorMessage);
-        context.sendBroadcast(intent);
+        sContext.sendBroadcast(intent);
     }
 
-    public static void sendAppCrash(@NonNull Context context, String name, String trace, String log) {
-        Intent intent = createIntent(ACTION_APP_UNCAUGHT_EXCEPTION, getPackageInfo(context));
+    public static void sendAppCrash(String name, String trace, String log) {
+        Intent intent = createIntent(ACTION_APP_UNCAUGHT_EXCEPTION, sPackageInfo);
         intent.putExtra("trace", trace);
         intent.putExtra("name", name);
         intent.putExtra("logs", log);
-        context.sendBroadcast(intent);
+        sContext.sendBroadcast(intent);
     }
 
     private static PackageInfo getPackageInfo(@NonNull Context context) {
