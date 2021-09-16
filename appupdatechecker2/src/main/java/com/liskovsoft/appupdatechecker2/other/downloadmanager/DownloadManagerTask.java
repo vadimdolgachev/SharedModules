@@ -1,10 +1,13 @@
 package com.liskovsoft.appupdatechecker2.other.downloadmanager;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Looper;
+import android.widget.Toast;
 import com.liskovsoft.sharedutils.helpers.FileHelpers;
+import com.liskovsoft.sharedutils.helpers.MessageHelpers;
 import com.liskovsoft.sharedutils.mylogger.Log;
 
 import java.io.File;
@@ -50,11 +53,10 @@ public class DownloadManagerTask extends AsyncTask<Void, Integer, Integer> {
         public void onDownloadFailed(int status, int error) {}
     }
 
-    private final DownloadListener mListener;
-    @SuppressLint("StaticFieldLeak")
-    private final Context mContext;
-    private final String mDownloadUrl;
-    private final DownloadManager mDownloadManager;
+    private DownloadListener mListener;
+    private Context mContext;
+    private String mDownloadUrl;
+    private DownloadManager mDownloadManager;
     private long mDownloadId;
     private boolean isDone;
 
@@ -70,6 +72,10 @@ public class DownloadManagerTask extends AsyncTask<Void, Integer, Integer> {
     protected void onPreExecute() {
         Log.d(TAG, "DownloadManagerTask started, " + mDownloadUrl);
         mListener.onDownloadStarted();
+    }
+
+    private void showMessage(final String msg) {
+        new Handler(Looper.getMainLooper()).post(() -> Toast.makeText(mContext, msg, Toast.LENGTH_LONG).show());
     }
 
     @Override
@@ -95,7 +101,7 @@ public class DownloadManagerTask extends AsyncTask<Void, Integer, Integer> {
             mDownloadId = mDownloadManager.enqueue(request);
         } catch (IllegalStateException ex) {
             Log.e(TAG, ex.getMessage(), ex);
-            //MessageHelpers.showMessage(mContext, TAG, ex);
+            MessageHelpers.showMessage(mContext, TAG, ex);
         }
 
         return isDone ? android.app.DownloadManager.STATUS_SUCCESSFUL : android.app.DownloadManager.STATUS_FAILED;
@@ -134,7 +140,7 @@ public class DownloadManagerTask extends AsyncTask<Void, Integer, Integer> {
                 }
             } catch (IllegalStateException ex) {
                 Log.e(TAG, ex.getMessage(), ex);
-                //MessageHelpers.showMessage(mContext, TAG, ex);
+                MessageHelpers.showMessage(mContext, TAG, ex);
                 mListener.onDownloadFailed(result, android.app.DownloadManager.ERROR_UNKNOWN);
             }
         } else {
