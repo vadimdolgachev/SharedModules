@@ -479,12 +479,12 @@ public final class Helpers {
         activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
     }
 
-    public static boolean equalsAny(String orig, String... arr) {
+    public static boolean equalsAny(Object orig, Object... arr) {
         if (orig == null || arr == null) {
             return false;
         }
 
-        for (String item : arr) {
+        for (Object item : arr) {
             if (orig.equals(item)) {
                 return true;
             }
@@ -1028,16 +1028,24 @@ public final class Helpers {
     }
 
     private static String[] split(String delim, String data) {
-        if (data == null || data.isEmpty()) {
+        if (data == null) {
             return null;
+        }
+
+        if (data.isEmpty()) {
+            return new String[]{};
         }
 
         return data.split(Pattern.quote(delim));
     }
 
     private static String merge(String delim, Object... params) {
-        if (params == null || params.length == 0) {
+        if (params == null) {
             return null;
+        }
+
+        if (params.length == 0) {
+            return "";
         }
 
         StringBuilder sb = new StringBuilder();
@@ -1310,20 +1318,24 @@ public final class Helpers {
             return false;
         }
 
-        MediaCodecInfo[] codecInfos = new MediaCodecList(MediaCodecList.ALL_CODECS).getCodecInfos();
+        try {
+            MediaCodecInfo[] codecInfos = new MediaCodecList(MediaCodecList.ALL_CODECS).getCodecInfos();
 
-        for (MediaCodecInfo codecInfo : codecInfos) {
-            if (codecInfo.isEncoder() || !isHardwareAccelerated(codecInfo.getName())) {
-                continue;
-            }
+            for (MediaCodecInfo codecInfo : codecInfos) {
+                if (codecInfo.isEncoder() || !isHardwareAccelerated(codecInfo.getName())) {
+                    continue;
+                }
 
-            String[] types = codecInfo.getSupportedTypes();
+                String[] types = codecInfo.getSupportedTypes();
 
-            for (String type : types) {
-                if (type.equalsIgnoreCase(mimeType)) {
-                    return true;
+                for (String type : types) {
+                    if (type.equalsIgnoreCase(mimeType)) {
+                        return true;
+                    }
                 }
             }
+        } catch (RuntimeException e) {
+            // cannot get MediaCodecList
         }
 
         return false;
