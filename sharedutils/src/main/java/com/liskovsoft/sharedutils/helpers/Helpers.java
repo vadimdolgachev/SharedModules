@@ -416,8 +416,8 @@ public final class Helpers {
         if (context == null) {
             return false;
         }
-
-        return VERSION.SDK_INT >= 24 && context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE);
+        return false;
+//        return VERSION.SDK_INT >= 24 && context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE);
     }
 
     public static boolean isTouchSupported(Context context) {
