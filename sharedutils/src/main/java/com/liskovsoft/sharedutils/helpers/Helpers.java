@@ -122,15 +122,34 @@ public final class Helpers {
         return String.format("%s (%s)", Build.MODEL, Build.PRODUCT);
     }
 
+    /**
+     * Source: https://stackoverflow.com/questions/16704597/how-do-you-get-the-user-defined-device-name-in-android
+     */
     public static String getUserDeviceName(Context context) {
-        // No need special permissions
-        String bluetoothName = Settings.Secure.getString(context.getContentResolver(), "bluetooth_name");
+        // 1) No need special permissions
+        String bluetoothName = Settings.System.getString(context.getContentResolver(), "bluetooth_name");
 
         if (bluetoothName == null) {
-            // Require permission?
-            BluetoothAdapter myDevice = BluetoothAdapter.getDefaultAdapter();
-            if (myDevice != null) {
-                bluetoothName = myDevice.getName();
+            // 2) No need special permissions
+            bluetoothName = Settings.Secure.getString(context.getContentResolver(), "bluetooth_name");
+
+            if (bluetoothName == null) {
+                // 3) Require permission
+                BluetoothAdapter myDevice = BluetoothAdapter.getDefaultAdapter();
+
+                if (myDevice != null) {
+                    bluetoothName = myDevice.getName();
+                }
+
+                if (bluetoothName == null) {
+                    // 4)
+                    bluetoothName = Settings.System.getString(context.getContentResolver(), "device_name");
+
+                    if (bluetoothName == null) {
+                        // 5)
+                        bluetoothName = Settings.Secure.getString(context.getContentResolver(), "lock_screen_owner_info");
+                    }
+                }
             }
         }
 
@@ -1250,22 +1269,39 @@ public final class Helpers {
     /**
      * Predicate replacement function for devices with Android 6.0 and below.
      */
-    public static <T> T removeIf(Collection<T> collection, Filter<T> filter) {
+    public static <T> List<T> removeIf(Collection<T> collection, Filter<T> filter) {
         if (collection == null || filter == null) {
             return null;
         }
 
-        T removed = null;
+        List<T> removed = null;
         final Iterator<T> each = collection.iterator();
         while (each.hasNext()) {
             T next = each.next();
             if (filter.test(next)) {
                 each.remove();
-                removed = next;
+                if (removed == null) {
+                    removed = new ArrayList<>();
+                }
+                removed.add(next);
             }
         }
 
         return removed;
+    }
+
+    public static <T> T findFirst(Collection<T> collection, Filter<T> filter) {
+        if (collection == null || filter == null) {
+            return null;
+        }
+
+        for (T next : collection) {
+            if (filter.test(next)) {
+                return next;
+            }
+        }
+
+        return null;
     }
 
     public static <T> void removeDuplicates(List<T> list) {
@@ -1358,5 +1394,26 @@ public final class Helpers {
         }
 
         return true;
+    }
+
+    /**
+     * Binary values check utility
+     */
+    public static boolean check(int origin, int... values) {
+        int combined = 0;
+
+        for (int value : values) {
+            combined |= value;
+        }
+
+        return (origin & combined) == combined;
+    }
+
+    public static String abbreviate(String title, int maxLength) {
+        if (title == null || maxLength <= 0 || title.length() <= maxLength) {
+            return title;
+        }
+
+        return title.substring(0, maxLength) + "\u2026"; // ...
     }
 }
