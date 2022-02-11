@@ -78,7 +78,18 @@ public class FileHelpers {
             return null;
         }
 
-        return context.getExternalFilesDir(null);
+        File filesDir = context.getExternalFilesDir(null);
+
+        if (filesDir == null || !filesDir.canWrite()) {
+            // No storage, try to use internal one
+            filesDir = Environment.getExternalStorageDirectory();
+
+            if (filesDir == null || !filesDir.canWrite()) {
+                filesDir = null;
+            }
+        }
+
+        return filesDir;
     }
 
     /**
@@ -150,11 +161,18 @@ public class FileHelpers {
     }
 
     private static boolean deleteRecursive(File sourceLocation, boolean deleteRoot) {
+        return deleteRecursive(sourceLocation, deleteRoot, 0);
+    }
+
+    /**
+     * Use level to prevent StackOverflowError
+     */
+    private static boolean deleteRecursive(File sourceLocation, boolean deleteRoot, int level) {
         if (sourceLocation != null && sourceLocation.isDirectory()) {
             String[] children = sourceLocation.list();
-            if (children != null) { // Android 4.4 fix
+            if (children != null && level < 10) { // Android 4.4 fix, prevent stack overflow
                 for (String child : children) {
-                    boolean success = deleteRecursive(new File(sourceLocation, child), true);
+                    boolean success = deleteRecursive(new File(sourceLocation, child), true, level + 1);
                     if (!success) {
                         return false;
                     }
@@ -165,6 +183,26 @@ public class FileHelpers {
             return sourceLocation.delete();
         } else {
             return false;
+        }
+    }
+
+    public static void deleteByPrefix(File directory, String prefix) {
+        if (directory == null) {
+            return;
+        }
+
+        File[] files = directory.listFiles();
+
+        if (files == null) {
+            return;
+        }
+
+        for (File file : files) {
+            if (file != null && file.isDirectory()) {
+                deleteByPrefix(file, prefix);
+            } else if (file != null && file.isFile() && file.getName().startsWith(prefix)) {
+                file.delete();
+            }
         }
     }
 
@@ -492,8 +530,14 @@ public class FileHelpers {
             return 0;
         }
 
+        File[] files = dir.listFiles();
+
+        if (files == null) {
+            return 0;
+        }
+
         long size = 0;
-        for (File file : dir.listFiles()) {
+        for (File file : files) {
             if (file != null && file.isDirectory()) {
                 size += getDirSize(file);
             } else if (file != null && file.isFile()) {

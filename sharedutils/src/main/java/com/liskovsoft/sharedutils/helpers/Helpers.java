@@ -57,6 +57,7 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -107,6 +108,13 @@ public final class Helpers {
 
     public static InputStream appendStream(InputStream first, InputStream second) {
         return FileHelpers.appendStream(first, second);
+    }
+    
+    public static <T> T[] appendArray(T[] first, T[] second) {
+        T[] result = Arrays.copyOf(first, first.length + second.length);
+        System.arraycopy(second, 0, result, first.length, second.length);
+
+        return result;
     }
 
     public static String encodeURI(byte[] data) {
@@ -388,7 +396,7 @@ public final class Helpers {
      * @param nameArr array to match
      * @return whether ended with arr
      */
-    public static boolean endsWith(String fullStr, String[] nameArr) {
+    public static boolean endsWith(String fullStr, String... nameArr) {
         for (String name : nameArr) {
             if (fullStr.endsWith(name)) {
                 return true;
@@ -522,6 +530,20 @@ public final class Helpers {
         }
 
         return first.equals(second);
+    }
+
+    public static boolean containsAny(String first, String... second) {
+        if (second == null) {
+            return false;
+        }
+
+        for (String item : second) {
+            if (contains(first, item)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static boolean contains(String first, String second) {
@@ -1051,7 +1073,8 @@ public final class Helpers {
             return null;
         }
 
-        if (data.isEmpty()) {
+        // NOTE: empty array/object represented by space
+        if (data.trim().isEmpty()) {
             return new String[]{};
         }
 
@@ -1064,7 +1087,7 @@ public final class Helpers {
         }
 
         if (params.length == 0) {
-            return "";
+            return " "; // NOTE: empty array/object represented by space
         }
 
         StringBuilder sb = new StringBuilder();
@@ -1219,7 +1242,7 @@ public final class Helpers {
             return -1;
         }
 
-        int hash = 0;
+        int hash = -1;
 
         for (Object item : items) {
             if (item != null) {
@@ -1228,7 +1251,7 @@ public final class Helpers {
             }
         }
 
-        return Math.abs(hash);
+        return hash != -1 ? Math.abs(hash) : -1;
     }
 
     public static String decode(String urlDecoded) {
@@ -1268,6 +1291,7 @@ public final class Helpers {
 
     /**
      * Predicate replacement function for devices with Android 6.0 and below.
+     * @return removed items (if any) or null (if nothing removed)
      */
     public static <T> List<T> removeIf(Collection<T> collection, Filter<T> filter) {
         if (collection == null || filter == null) {
@@ -1288,6 +1312,24 @@ public final class Helpers {
         }
 
         return removed;
+    }
+    
+    public static <T> List<T> filter(Collection<T> collection, Filter<T> filter) {
+        if (collection == null || filter == null) {
+            return null;
+        }
+
+        List<T> result = null;
+        for (T next : collection) {
+            if (filter.test(next)) {
+                if (result == null) {
+                    result = new ArrayList<>();
+                }
+                result.add(next);
+            }
+        }
+
+        return result;
     }
 
     public static <T> T findFirst(Collection<T> collection, Filter<T> filter) {

@@ -18,6 +18,9 @@ public class GlobalPreferences extends SharedPreferencesBase {
     private static final String RECOMMENDED_PLAYLIST_TYPE = "recommended_playlist_type";
     private static final String PREFERRED_LANGUAGE_DATA = "preferred_language_data";
     private static final String PREFERRED_COUNTRY_DATA = "preferred_country_data";
+    private static final String ENABLE_CHANNELS_SERVICE = "enable_channels_service";
+    private static final String PREFER_IPV_4_DNS = "prefer_ipv4_dns";
+    private static final String ENABLE_DNS_OVER_HTTPS = "enable_dns_over_https";
     public static final String PLAYLIST_TYPE_RECOMMENDATIONS = "playlist_type_recommendations";
     public static final String PLAYLIST_TYPE_SUBSCRIPTIONS = "playlist_type_subscriptions";
     public static final String PLAYLIST_TYPE_HISTORY = "playlist_type_history";
@@ -50,6 +53,10 @@ public class GlobalPreferences extends SharedPreferencesBase {
         } else {
             new Thread(callback).start(); // fix network on main thread exception
         }
+    }
+
+    public static boolean isInitialized() {
+        return sInstance != null && sInstance.getContext() != null;
     }
 
     public void setRawAuthData(String data) {
@@ -108,5 +115,29 @@ public class GlobalPreferences extends SharedPreferencesBase {
 
     public String getPreferredCountry() {
         return getString(PREFERRED_COUNTRY_DATA, null);
+    }
+
+    public void enableChannelsService(boolean enable) {
+        putBoolean(ENABLE_CHANNELS_SERVICE, enable);
+    }
+
+    public boolean isChannelsServiceEnabled() {
+        return getBoolean(ENABLE_CHANNELS_SERVICE, true);
+    }
+
+    public void preferIPv4Dns(boolean enable) {
+        putBoolean(PREFER_IPV_4_DNS, enable);
+    }
+
+    public boolean isIPv4DnsPreferred() {
+        return getBoolean(PREFER_IPV_4_DNS, false);
+    }
+
+    public void enableDnsOverHttps(boolean enable) {
+        putBoolean(ENABLE_DNS_OVER_HTTPS, enable);
+    }
+
+    public boolean isDnsOverHttpsEnabled() {
+        return getBoolean(ENABLE_DNS_OVER_HTTPS, false);
     }
 }
