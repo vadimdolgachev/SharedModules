@@ -7,6 +7,7 @@ import okhttp3.ConnectionPool;
 import okhttp3.ConnectionSpec;
 import okhttp3.OkHttpClient;
 import okhttp3.OkHttpClient.Builder;
+import okhttp3.Protocol;
 import okhttp3.TlsVersion;
 
 import javax.net.ssl.HostnameVerifier;
@@ -86,12 +87,51 @@ public final class OkHttpCommons {
     /**
      * Fixing SSL handshake timed out (probably provider issues in some countries)
      */
+
+    private static final CipherSuite[] RESTRICTED_TLS2 = new CipherSuite[] {
+//            // TLSv1.3
+            CipherSuite.TLS_AES_128_GCM_SHA256,
+            CipherSuite.TLS_AES_256_GCM_SHA384,
+            CipherSuite.TLS_CHACHA20_POLY1305_SHA256,
+            CipherSuite.TLS_AES_128_CCM_SHA256,
+            CipherSuite.TLS_AES_256_CCM_8_SHA256,
+
+            CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+            CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+            CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+            CipherSuite.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+            CipherSuite.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+            CipherSuite.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+
+            // Note that the following cipher suites are all on HTTP/2's bad cipher suites list. We'll
+            // continue to include them until better suites are commonly available. For example, none
+            // of the better cipher suites listed above shipped with Android 4.4 or Java 7.
+//            CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+//            CipherSuite.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+//            CipherSuite.TLS_RSA_WITH_AES_128_GCM_SHA256,
+//            CipherSuite.TLS_RSA_WITH_AES_256_GCM_SHA384,
+//            CipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA,
+//            CipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA,
+//            CipherSuite.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+    };
+
     public static void setupConnectionFix(Builder okBuilder) {
         // Alter cipher list to create unique TLS fingerprint
         ConnectionSpec cs = new ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
-                .cipherSuites(APPROVED_CIPHER_SUITES_ALT)
+                .cipherSuites(RESTRICTED_TLS2)
+                .tlsVersions(TlsVersion.TLS_1_0, TlsVersion.TLS_1_1, TlsVersion.TLS_1_2, TlsVersion.TLS_1_3)
+                .supportsTlsExtensions(false)
                 .build();
         okBuilder.connectionSpecs(Arrays.asList(cs, ConnectionSpec.CLEARTEXT));
+        okBuilder.protocols(Collections.singletonList(Protocol.HTTP_1_1));
+
+//        final ConnectionSpec MODERN_TLS = new ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
+//                .cipherSuites(APPROVED_CIPHER_SUITES2)
+//                .tlsVersions(TlsVersion.TLS_1_3, TlsVersion.TLS_1_2, TlsVersion.TLS_1_1, TlsVersion.TLS_1_0)
+//                .supportsTlsExtensions(false)
+//                .build();
+//        okBuilder.connectionSpecs(Arrays.asList(MODERN_TLS, ConnectionSpec.CLEARTEXT));
+//        okBuilder.protocols(Collections.singletonList(Protocol.HTTP_1_1));
     }
 
     /**
