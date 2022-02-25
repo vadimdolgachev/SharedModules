@@ -7,7 +7,6 @@ import okhttp3.ConnectionPool;
 import okhttp3.ConnectionSpec;
 import okhttp3.OkHttpClient;
 import okhttp3.OkHttpClient.Builder;
-import okhttp3.Protocol;
 import okhttp3.TlsVersion;
 
 import javax.net.ssl.HostnameVerifier;
@@ -18,8 +17,6 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import java.security.KeyStore;
-import java.security.Provider;
-import java.security.Security;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -89,7 +86,6 @@ public final class OkHttpCommons {
     /**
      * Fixing SSL handshake timed out (probably provider issues in some countries)
      */
-
     public static void setupConnectionFix(Builder okBuilder) {
         // Alter cipher list to create unique TLS fingerprint
         ConnectionSpec cs = new ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
