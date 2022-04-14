@@ -26,6 +26,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
+import android.util.Patterns;
 import android.util.TypedValue;
 import android.view.Display;
 import android.view.KeyEvent;
@@ -588,6 +589,20 @@ public final class Helpers {
         prefix = prefix.toLowerCase();
 
         return word.startsWith(prefix);
+    }
+
+    public static boolean startsWithAny(String word, String... prefixes) {
+        if (word == null || prefixes == null) {
+            return false;
+        }
+
+        for (String prefix : prefixes) {
+            if (startsWith(word, prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static boolean isDash(String id) {
@@ -1167,7 +1182,7 @@ public final class Helpers {
     }
 
     public static int[] range(int start, int end, int step) {
-        int size = (Math.abs(start) + Math.abs(end)) / step + 1;
+        int size = (end - start) / step + 1;
         int[] result = new int[size];
         int value = start;
 
@@ -1269,6 +1284,10 @@ public final class Helpers {
         }
 
         return result;
+    }
+
+    public static boolean isUrl(String link) {
+        return link != null && Patterns.WEB_URL.matcher(link).matches();
     }
 
     public interface Filter<T> {
