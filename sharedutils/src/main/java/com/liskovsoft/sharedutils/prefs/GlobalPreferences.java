@@ -7,7 +7,11 @@ import com.liskovsoft.sharedutils.helpers.Helpers;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class GlobalPreferences extends SharedPreferencesBase {
+final public class GlobalPreferences extends SharedPreferencesBase {
+    public static final String PLAYLIST_TYPE_RECOMMENDATIONS = "playlist_type_recommendations";
+    public static final String PLAYLIST_TYPE_SUBSCRIPTIONS = "playlist_type_subscriptions";
+    public static final String PLAYLIST_TYPE_HISTORY = "playlist_type_history";
+    public static final String PLAYLIST_TYPE_NONE = "playlist_type_none";
     @SuppressLint("StaticFieldLeak")
     public static GlobalPreferences sInstance;
     private static final String SHARED_PREFERENCES_NAME = GlobalPreferences.class.getName();
@@ -21,10 +25,12 @@ public class GlobalPreferences extends SharedPreferencesBase {
     private static final String ENABLE_CHANNELS_SERVICE = "enable_channels_service";
     private static final String PREFER_IPV_4_DNS = "prefer_ipv4_dns";
     private static final String ENABLE_DNS_OVER_HTTPS = "enable_dns_over_https";
-    public static final String PLAYLIST_TYPE_RECOMMENDATIONS = "playlist_type_recommendations";
-    public static final String PLAYLIST_TYPE_SUBSCRIPTIONS = "playlist_type_subscriptions";
-    public static final String PLAYLIST_TYPE_HISTORY = "playlist_type_history";
-    public static final String PLAYLIST_TYPE_NONE = "playlist_type_none";
+    private static final String VISITOR_COOKIE = "visitor_cookie";
+    private static final String HIDE_SHORTS_FROM_SUBSCRIPTIONS = "hide_shorts_from_subscriptions";
+    private static final String HIDE_SHORTS_FROM_HOME = "hide_shorts_from_home";
+    private static final String HIDE_SHORTS_FROM_HISTORY = "hide_shorts_from_history";
+    private static final String HIDE_UPCOMING = "hide_upcoming";
+    private static final String CONTENT_BLOCK_ALT_SERVER = "content_block_alt_server";
     private static final List<Runnable> sCallbacks = new CopyOnWriteArrayList<>(); // fix ConcurrentModificationException
 
     private GlobalPreferences(Context context) {
@@ -57,6 +63,16 @@ public class GlobalPreferences extends SharedPreferencesBase {
 
     public static boolean isInitialized() {
         return sInstance != null && sInstance.getContext() != null;
+    }
+
+    public static String getVisitorCookie() {
+        return isInitialized() ? sInstance.getString(VISITOR_COOKIE, null) : null;
+    }
+
+    public static void setVisitorCookie(String visitorCookie) {
+        if (isInitialized()) {
+            sInstance.putString(VISITOR_COOKIE, visitorCookie);
+        }
     }
 
     public void setRawAuthData(String data) {
@@ -139,5 +155,45 @@ public class GlobalPreferences extends SharedPreferencesBase {
 
     public boolean isDnsOverHttpsEnabled() {
         return getBoolean(ENABLE_DNS_OVER_HTTPS, false);
+    }
+
+    public void hideShortsFromSubscriptions(boolean enable) {
+        putBoolean(HIDE_SHORTS_FROM_SUBSCRIPTIONS, enable);
+    }
+
+    public boolean isHideShortsFromSubscriptionsEnabled() {
+        return getBoolean(HIDE_SHORTS_FROM_SUBSCRIPTIONS, false);
+    }
+
+    public void hideShortsFromHome(boolean enable) {
+        putBoolean(HIDE_SHORTS_FROM_HOME, enable);
+    }
+
+    public boolean isHideShortsFromHomeEnabled() {
+        return getBoolean(HIDE_SHORTS_FROM_HOME, false);
+    }
+
+    public void hideShortsFromHistory(boolean enable) {
+        putBoolean(HIDE_SHORTS_FROM_HISTORY, enable);
+    }
+
+    public boolean isHideShortsFromHistoryEnabled() {
+        return getBoolean(HIDE_SHORTS_FROM_HISTORY, false);
+    }
+
+    public void hideUpcoming(boolean enable) {
+        putBoolean(HIDE_UPCOMING, enable);
+    }
+
+    public boolean isHideUpcomingEnabled() {
+        return getBoolean(HIDE_UPCOMING, false);
+    }
+
+    public void enableContentBlockAltServer(boolean enable) {
+        putBoolean(CONTENT_BLOCK_ALT_SERVER, enable);
+    }
+
+    public boolean isContentBlockAltServerEnabled() {
+        return getBoolean(CONTENT_BLOCK_ALT_SERVER, false);
     }
 }

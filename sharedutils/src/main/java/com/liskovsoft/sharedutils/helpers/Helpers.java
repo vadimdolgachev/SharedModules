@@ -68,7 +68,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.Callable;
@@ -886,6 +885,7 @@ public final class Helpers {
     }
 
     /**
+     * Works in most of the cases.<br/>
      * https://stackoverflow.com/questions/5105354/how-to-show-soft-keyboard-when-edittext-is-focused
      */
     public static void showKeyboard(@Nullable Context context) {
@@ -895,6 +895,18 @@ public final class Helpers {
 
         InputMethodManager inputMethodManager = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
         inputMethodManager.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+    }
+
+    /**
+     * Sometimes doesn't work. IDK why.
+     */
+    public static void showKeyboardAlt(@Nullable Context context, View view) {
+        if (context == null) {
+            return;
+        }
+
+        InputMethodManager inputMethodManager = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
+        inputMethodManager.showSoftInput(view, 0);
     }
 
     public static void hideKeyboard(@Nullable Context context, View view) {
@@ -1317,6 +1329,20 @@ public final class Helpers {
         }
 
         return removed;
+    }
+
+    public static <T> boolean containsIf(Collection<T> collection, Filter<T> filter) {
+        if (collection == null || filter == null) {
+            return false;
+        }
+
+        for (T next : collection) {
+            if (filter.test(next)) {
+                return true;
+            }
+        }
+
+        return false;
     }
     
     public static <T> List<T> filter(Collection<T> collection, Filter<T> filter) {
