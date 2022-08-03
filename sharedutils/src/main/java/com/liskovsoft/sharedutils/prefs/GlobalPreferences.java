@@ -90,7 +90,7 @@ final public class GlobalPreferences extends SharedPreferencesBase {
     }
 
     public String getRecommendedPlaylistType() {
-        return getString(RECOMMENDED_PLAYLIST_TYPE, PLAYLIST_TYPE_SUBSCRIPTIONS);
+        return getString(RECOMMENDED_PLAYLIST_TYPE, PLAYLIST_TYPE_RECOMMENDATIONS);
     }
 
     public void setMediaServiceRefreshToken(String token) {
@@ -157,20 +157,20 @@ final public class GlobalPreferences extends SharedPreferencesBase {
         return getBoolean(ENABLE_DNS_OVER_HTTPS, false);
     }
 
-    public void hideShortsFromSubscriptions(boolean enable) {
-        putBoolean(HIDE_SHORTS_FROM_SUBSCRIPTIONS, enable);
-    }
-
-    public boolean isHideShortsFromSubscriptionsEnabled() {
-        return getBoolean(HIDE_SHORTS_FROM_SUBSCRIPTIONS, false);
-    }
-
     public void hideShortsFromHome(boolean enable) {
         putBoolean(HIDE_SHORTS_FROM_HOME, enable);
     }
 
     public boolean isHideShortsFromHomeEnabled() {
         return getBoolean(HIDE_SHORTS_FROM_HOME, false);
+    }
+
+    public void hideShortsFromSubscriptions(boolean enable) {
+        putBoolean(HIDE_SHORTS_FROM_SUBSCRIPTIONS, enable);
+    }
+
+    public boolean isHideShortsFromSubscriptionsEnabled() {
+        return getBoolean(HIDE_SHORTS_FROM_SUBSCRIPTIONS, false);
     }
 
     public void hideShortsFromHistory(boolean enable) {
