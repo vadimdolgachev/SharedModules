@@ -13,6 +13,9 @@ project.ext {
     buildToolsVersion = '30.0.3'
     kotlinVersion = '1.5.30'
     kotlinCoreVersion = '1.6.0'
+    // https://developer.android.com/studio/releases/gradle-plugin#updating-gradle
+    gradleVersion = '6.9.1'
+    androidGradleVersion = '4.0.0+' // last version compatible with IntellJ 2020.3
     
     testSupportLibraryVersion = '0.5'
     testXSupportLibraryVersion = '1.1.0'
@@ -32,6 +35,8 @@ project.ext {
     autoValueVersion = '1.6'
     checkerframeworkVersion = '2.5.0'
     testRunnerVersion = '1.0.2'
+    materialVersion = '1.2.1'
+    flexboxVersion = '1.0.0'
     
     legacyExoplayerVersion = '2.9.6'
     // exoplayerVersion = '2.10.8' // Old
@@ -58,6 +63,7 @@ project.ext {
     multiDexVersion = '2.0.0' // crashlytics fix on Android 4.4
     stethoVersion = '1.5.0' // Chrome Dev Tools
     glideVersion = '4.11.0'
+    webpDecoderVersion = '2.0.' + glideVersion // should end with glide version
     rxAndroidVersion = '2.1.1'
     rxJavaVersion = '2.2.21'
     diskLruCacheVersion = '2.0.2'
@@ -80,7 +86,8 @@ project.ext {
     //duktapeVersion = '1.4.0' // js interpreter
     duktapeVersion = '1.1.0' // old one contains more *.so binaries and has smaller size than 1.2.0
     quickjsVersion = '0.9.0' // duktape fork?
-    rhinoVersion = '1.7.13' // last version with Android 4,5,6 support
+    rhinoVersion = '1.7.13' // latest for Android 4,5,6
+    j2v8Version = '6.2.0' // latest for Android 4
     
     // My commons-io deps (Android 4.3 fix)
     commonsLangVersion = '3.11'
