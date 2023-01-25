@@ -92,6 +92,11 @@ public final class Helpers {
     private static int sVP9MaxHeight;
     private static int sAV1MaxHeight;
     private static Random sRandom;
+    // https://unicode-table.com/en/
+    // https://www.compart.com/en/unicode/
+    public static final String THUMB_UP = "\uD83D\uDC4D";
+    //public static final String HOURGLASS = "⌛";
+    public static final String HOURGLASS = "\u231B";
 
     /**
      * Simple wildcard matching routine. Implemented without regex. So you may expect huge performance boost.
@@ -514,6 +519,14 @@ public final class Helpers {
     @SuppressLint("SourceLockedOrientationActivity")
     public static void makeActivityHorizontal(Activity activity) {
         activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+    }
+
+    public static boolean equalsAny(Integer orig, Integer... arr) {
+        return equalsAny(orig, (Object[]) arr);
+    }
+
+    public static boolean equalsAny(String orig, String... arr) {
+        return equalsAny(orig, (Object[]) arr);
     }
 
     public static boolean equalsAny(Object orig, Object... arr) {
@@ -1520,6 +1533,11 @@ public final class Helpers {
             sAV1MaxHeight = getCodecMaxHeight(MIME_AV1);
         }
 
+        // Fix AV1 8K support (?)
+        if (height > 2160) {
+            height = 2160;
+        }
+
         return height <= sAV1MaxHeight;
     }
 
@@ -1612,23 +1630,42 @@ public final class Helpers {
             return size;
         }
 
-        if (sRandom == null) {
-            sRandom = new Random();
-        }
-
-        return sRandom.nextInt(size);
+        return getRandom().nextInt(size);
     }
 
     public static int getRandomNumber(int min, int max) {
-        if (sRandom == null) {
-            sRandom = new Random();
-        }
-
-        return sRandom.nextInt((max - min) + 1) + min;
+        return getRandom().nextInt((max - min) + 1) + min;
     }
 
     public static <T extends Comparable<T>> T[] sortNatural(T[] stringArray) {
         Arrays.sort(stringArray, T::compareTo);
         return stringArray;
+    }
+
+    /**
+     * Implementing Fisher–Yates shuffle
+     */
+    public static <T> T[] shuffleArray(T[] arr) {
+        if (arr == null || arr.length == 0) {
+            return arr;
+        }
+
+        for (int i = arr.length - 1; i > 0; i--) {
+            int index = getRandom().nextInt(i + 1);
+            // Simple swap
+            T item = arr[index];
+            arr[index] = arr[i];
+            arr[i] = item;
+        }
+
+        return arr;
+    }
+
+    private static Random getRandom() {
+        if (sRandom == null) {
+            sRandom = new Random();
+        }
+
+        return sRandom;
     }
 }

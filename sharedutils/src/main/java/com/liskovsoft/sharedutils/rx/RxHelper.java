@@ -4,8 +4,11 @@ import androidx.annotation.Nullable;
 import com.liskovsoft.sharedutils.mylogger.Log;
 import io.reactivex.Completable;
 import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.exceptions.OnErrorNotImplementedException;
 import io.reactivex.exceptions.UndeliverableException;
 import io.reactivex.plugins.RxJavaPlugins;
 import io.reactivex.schedulers.Schedulers;
@@ -13,13 +16,14 @@ import io.reactivex.schedulers.Schedulers;
 import java.io.IOException;
 import java.net.SocketException;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /**
  * <a href="https://medium.com/android-news/rxjava-schedulers-what-when-and-how-to-use-it-6cfc27293add">Info about schedulers</a>
  */
-public class RxUtils {
-    private static final String TAG = RxUtils.class.getSimpleName();
+public class RxHelper {
+    private static final String TAG = RxHelper.class.getSimpleName();
 
     public static void disposeActions(Disposable... actions) {
         if (actions != null) {
@@ -77,9 +81,7 @@ public class RxUtils {
     }
 
     public static <T> Disposable execute(Observable<T> observable) {
-        return observable
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
+        return setup(observable)
                 .subscribe(
                         obj -> {}, // ignore result
                         error -> Log.e(TAG, "Execute error: %s", error.getMessage())
@@ -87,9 +89,7 @@ public class RxUtils {
     }
 
     public static <T> Disposable execute(Observable<T> observable, Runnable onFinish) {
-        return observable
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
+        return setup(observable)
                 .subscribe(
                         obj -> {}, // ignore result
                         error -> Log.e(TAG, "Execute error: %s", error.getMessage()),
@@ -98,9 +98,7 @@ public class RxUtils {
     }
 
     public static <T> Disposable execute(Observable<T> observable, Runnable onError, Runnable onFinish) {
-        return observable
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
+        return setup(observable)
                 .subscribe(
                         obj -> {}, // ignore result
                         error -> onError.run(),
@@ -109,12 +107,7 @@ public class RxUtils {
     }
 
     public static Disposable startInterval(Runnable callback, int periodSec) {
-        Observable<Long> playbackProgressObservable =
-                Observable.interval(periodSec, TimeUnit.SECONDS);
-
-        return playbackProgressObservable
-                .subscribeOn(Schedulers.newThread())
-                .observeOn(AndroidSchedulers.mainThread())
+        return interval(periodSec, TimeUnit.SECONDS)
                 .subscribe(
                         period -> callback.run(),
                         error -> Log.e(TAG, "startInterval error: %s", error.getMessage())
@@ -167,6 +160,10 @@ public class RxUtils {
             if (e instanceof UndeliverableException) {
                 e = e.getCause();
             }
+            if ((e instanceof IllegalStateException) && (e.getCause() instanceof SocketException)) {
+                // network problems
+                e = e.getCause();
+            }
             if (e instanceof IOException) {
                 // fine, irrelevant network problem or API that throws on cancellation
                 return;
@@ -189,5 +186,77 @@ public class RxUtils {
             }
             Log.e(TAG, "Undeliverable exception received, not sure what to do", e);
         });
+    }
+
+    public static <T> Observable<T> create(ObservableOnSubscribe<T> source) {
+        return setup(Observable.create(source));
+    }
+
+    public static <T> Observable<T> createLong(ObservableOnSubscribe<T> source) {
+        return setupLong(Observable.create(source));
+    }
+
+    public static <T> Observable<T> fromCallable(Callable<T> supplier) {
+        return setup(Observable.fromCallable(supplier));
+    }
+
+    public static <T> Observable<T> fromIterable(Iterable<T> source) {
+        return setup(Observable.fromIterable(source));
+    }
+
+    public static Observable<Void> fromVoidable(Runnable callback) {
+        return create(emitter -> {
+            callback.run();
+            emitter.onComplete();
+        });
+    }
+
+    public static <T> Observable<T> fromNullable(Callable<T> callback) {
+        return create(emitter -> {
+            T result = callback.call();
+
+            if (result != null) {
+                emitter.onNext(result);
+                emitter.onComplete();
+            } else {
+                // Be aware of OnErrorNotImplementedException exception if error handler not implemented!
+                // Essential part to notify about problems. Don't remove!
+                onError(emitter, "fromNullable result is null");
+                Log.e(TAG, "fromNullable result is null");
+            }
+        });
+    }
+
+    public static Observable<Long> interval(long period, TimeUnit unit) {
+        return setupLong(Observable.interval(period, unit));
+    }
+
+    /**
+     * Fix fall back on the global error handler.
+     * <a href="https://stackoverflow.com/questions/44420422/crash-when-sending-exception-through-rxjava">More info</a><br/>
+     * Be aware of {@link OnErrorNotImplementedException} exception if error handler not implemented inside subscribe clause!
+     */
+    public static <T> void onError(ObservableEmitter<T> emitter, String msg) {
+        emitter.tryOnError(new IllegalStateException(msg));
+    }
+
+    /**
+     * Short running tasks <br/>
+     * https://stackoverflow.com/questions/33370339/what-is-the-difference-between-schedulers-io-and-schedulers-computation
+     */
+    private static <T> Observable<T> setup(Observable<T> observable) {
+        return observable
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread());
+    }
+
+    /**
+     * Long running tasks <br/>
+     * https://stackoverflow.com/questions/33370339/what-is-the-difference-between-schedulers-io-and-schedulers-computation
+     */
+    private static <T> Observable<T> setupLong(Observable<T> observable) {
+        return observable
+                .subscribeOn(Schedulers.newThread()) // fix blocking (e.g. SponsorBlock not responding)
+                .observeOn(AndroidSchedulers.mainThread());
     }
 }
