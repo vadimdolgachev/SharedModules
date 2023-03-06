@@ -14,6 +14,7 @@ import io.reactivex.plugins.RxJavaPlugins;
 import io.reactivex.schedulers.Schedulers;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.SocketException;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -158,11 +159,14 @@ public class RxHelper {
     public static void setupGlobalErrorHandler() {
         RxJavaPlugins.setErrorHandler(e -> {
             if (e instanceof UndeliverableException) {
-                e = e.getCause();
+                Log.e(TAG, "Undeliverable exception received, not sure what to do", e.getCause());
+                return;
             }
-            if ((e instanceof IllegalStateException) && (e.getCause() instanceof SocketException)) {
-                // network problems
-                e = e.getCause();
+            if ((e instanceof IllegalStateException) &&
+                    ((e.getCause() instanceof SocketException) || (e.getCause() instanceof ConnectException))) {
+                // network problems (no internet, failed to connect etc)
+                Log.e(TAG, "Network error", e.getCause());
+                return;
             }
             if (e instanceof IOException) {
                 // fine, irrelevant network problem or API that throws on cancellation
@@ -184,7 +188,6 @@ public class RxHelper {
                         .uncaughtException(Thread.currentThread(), e);
                 return;
             }
-            Log.e(TAG, "Undeliverable exception received, not sure what to do", e);
         });
     }
 
@@ -245,6 +248,8 @@ public class RxHelper {
      * https://stackoverflow.com/questions/33370339/what-is-the-difference-between-schedulers-io-and-schedulers-computation
      */
     private static <T> Observable<T> setup(Observable<T> observable) {
+        // NOTE: Schedulers.io() reuses blocked threads in RxJava 2
+        // https://github.com/ReactiveX/RxJava/issues/6542
         return observable
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread());
@@ -255,8 +260,11 @@ public class RxHelper {
      * https://stackoverflow.com/questions/33370339/what-is-the-difference-between-schedulers-io-and-schedulers-computation
      */
     private static <T> Observable<T> setupLong(Observable<T> observable) {
+        // NOTE: Schedulers.io() reuses blocked threads in RxJava 2
+        // https://github.com/ReactiveX/RxJava/issues/6542
+        // fix blocking (e.g. SponsorBlock not responding)
         return observable
-                .subscribeOn(Schedulers.newThread()) // fix blocking (e.g. SponsorBlock not responding)
+                .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread());
     }
 }

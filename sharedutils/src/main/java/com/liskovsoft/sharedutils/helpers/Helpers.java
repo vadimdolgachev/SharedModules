@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ActivityNotFoundException;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -86,6 +87,7 @@ public final class Helpers {
     private static final String LEGACY_OBJECT_DELIM = ",";
     private static final String MIME_VP9 = "video/x-vnd.on2.vp9";
     private static final String MIME_AV1 = "video/av01";
+    private static final Pattern URL_PREFIX = Pattern.compile("^[a-z.]+://.+$");
     private static HashMap<String, List<String>> sCache = new HashMap<>();
     private static Boolean sIsVP9Supported;
     private static Boolean sIsAV1Supported;
@@ -97,6 +99,7 @@ public final class Helpers {
     public static final String THUMB_UP = "\uD83D\uDC4D";
     //public static final String HOURGLASS = "⌛";
     public static final String HOURGLASS = "\u231B";
+    private static DateFormat sDateFormat;
 
     /**
      * Simple wildcard matching routine. Implemented without regex. So you may expect huge performance boost.
@@ -438,7 +441,8 @@ public final class Helpers {
 
     public static boolean isAndroidTVLauncher(Context context) {
         return  isPackageExists(context, "com.google.android.leanbacklauncher") ||
-                isPackageExists(context, "com.google.android.tvlauncher"); // Android TV 10
+                isPackageExists(context, "com.google.android.tvlauncher") || // Android TV 10
+                isPackageExists(context, "com.google.android.apps.tv.launcherx"); // Google TV Home
     }
 
     public static boolean isAndroidTVRecommendations(Context context) {
@@ -902,9 +906,8 @@ public final class Helpers {
             return false;
         }
 
-        return url.startsWith("http://") ||
-               url.startsWith("https://") ||
-               url.startsWith("youtube://");
+        Matcher m = URL_PREFIX.matcher(url);
+        return m.matches();
     }
 
     /**
@@ -939,6 +942,26 @@ public final class Helpers {
 
         InputMethodManager inputMethodManager = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
         inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
+    }
+
+    /**
+     * https://stackoverflow.com/questions/4745988/how-do-i-detect-if-software-keyboard-is-visible-on-android-device-or-not
+     */
+    public static boolean isKeyboardShown(@Nullable Context context) {
+        if (context == null) {
+            return false;
+        }
+
+        InputMethodManager inputMethodManager = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
+
+        try {
+            Object height =
+                    InputMethodManager.class.getMethod("getInputMethodWindowVisibleHeight").invoke(inputMethodManager);
+            return height != null && ((int) height) > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     public static int getDeviceRam(Context context) {
@@ -1667,5 +1690,27 @@ public final class Helpers {
         }
 
         return sRandom;
+    }
+
+    private static DateFormat getDateFormat() {
+        if (sDateFormat == null) {
+            // https://jenkov.com/tutorials/java-internationalization/simpledateformat.html#pattern-syntax
+            sDateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault());
+            //sDateFormat = new SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale.getDefault());
+            //sDateFormat = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.getDefault());
+        }
+
+        return sDateFormat;
+    }
+
+    public static String toShortDate(long timeMs) {
+        return getDateFormat().format(new Date(timeMs));
+    }
+
+    public static void enableActivity(Context context, String activityClassName, boolean enable) {
+        context.getPackageManager().setComponentEnabledSetting(
+                new ComponentName(context, activityClassName),
+                enable ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.DONT_KILL_APP);
     }
 }
