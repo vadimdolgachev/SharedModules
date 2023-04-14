@@ -4,13 +4,28 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 
+import androidx.annotation.Nullable;
+
 public class SharedPreferencesBase {
     private final SharedPreferences mPrefs;
     protected Context mContext;
 
+    public static void setSharedPrefPrefixName(Context context,
+                                               @Nullable String prefixName) {
+        PreferenceManager.getDefaultSharedPreferences(context)
+                .edit()
+                .putString("pref_prefix_name", prefixName)
+                .apply();
+    }
+
+    public static @Nullable String getPrefixPrefName(Context context) {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getString("pref_prefix_name", null);
+    }
+
     public SharedPreferencesBase(Context context, String prefName) {
         mContext = context;
-        mPrefs = context.getSharedPreferences(prefName, Context.MODE_PRIVATE);
+        mPrefs = context.getSharedPreferences((getPrefixPrefName(context) != null ? getPrefixPrefName(context) : "") + prefName, Context.MODE_PRIVATE);
     }
 
     public SharedPreferencesBase(Context context, String prefName, int defValResId) {
@@ -21,9 +36,9 @@ public class SharedPreferencesBase {
 
     public SharedPreferencesBase(Context context, int defValResId) {
         mContext = context;
-        mPrefs = PreferenceManager.getDefaultSharedPreferences(mContext);
+        mPrefs = mContext.getSharedPreferences((getPrefixPrefName(context) != null ? getPrefixPrefName(context) : "") + context.getPackageName(), Context.MODE_PRIVATE);
         String defaultPrefsName = context.getPackageName() + "_preferences";
-        PreferenceManager.setDefaultValues(context, defaultPrefsName, Context.MODE_PRIVATE, defValResId, true);
+        PreferenceManager.setDefaultValues(context, (getPrefixPrefName(context) != null ? getPrefixPrefName(context) : "") + defaultPrefsName, Context.MODE_PRIVATE, defValResId, true);
     }
 
     public SharedPreferencesBase(Context context) {
