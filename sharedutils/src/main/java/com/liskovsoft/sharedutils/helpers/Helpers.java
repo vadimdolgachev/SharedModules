@@ -312,6 +312,24 @@ public final class Helpers {
         return result;
     }
 
+    public static String runMultiMatcher(String input, Pattern... patterns) {
+        if (input == null) {
+            return null;
+        }
+
+        String result = null;
+        for (Pattern pattern : patterns) {
+            Matcher matcher = pattern.matcher(input);
+
+            if (matcher.find()) {
+                result = matcher.group(matcher.groupCount()); // get last group
+                break;
+            }
+        }
+
+        return result;
+    }
+
     public static boolean isCallable(Context ctx, Intent intent) {
         List<ResolveInfo> list = ctx.getPackageManager().queryIntentActivities(intent,
                 PackageManager.MATCH_DEFAULT_ONLY);
@@ -1554,11 +1572,12 @@ public final class Helpers {
 
         if (sAV1MaxHeight == 0) {
             sAV1MaxHeight = getCodecMaxHeight(MIME_AV1);
-        }
 
-        // Fix AV1 8K support (?)
-        if (height > 2160) {
-            height = 2160;
+            // On Rockchip (and some others) av1 codec info is bugged.
+            // Reported max resolution is 360p.
+            if (sAV1MaxHeight > 0 && sAV1MaxHeight < 1080) {
+                sAV1MaxHeight = 2160;
+            }
         }
 
         return height <= sAV1MaxHeight;
@@ -1712,5 +1731,30 @@ public final class Helpers {
                 new ComponentName(context, activityClassName),
                 enable ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                 PackageManager.DONT_KILL_APP);
+    }
+
+    public static String join(CharSequence delim, CharSequence... elements) {
+        if (delim == null || elements == null) {
+            return null;
+        }
+
+        StringBuilder builder = new StringBuilder();
+
+        int counter = 0;
+        int length = elements.length;
+
+        for (CharSequence element : elements) {
+            if (element == null || element.length() == 0) {
+                ++counter;
+                continue;
+            }
+
+            builder.append(element);
+            if (++counter != length) {
+                builder.append(delim);
+            }
+        }
+
+        return builder.toString();
     }
 }

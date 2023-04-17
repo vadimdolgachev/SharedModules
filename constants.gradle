@@ -8,8 +8,10 @@ project.ext {
     // More info: https://stackoverflow.com/questions/48072438/java-lang-illegalstateexception-only-fullscreen-opaque-activities-can-request-o
     // NOTE: target sdk >= 28 cause weird behavior on Android 9 (slow text scroll speed etc)
     // NOTE: target sdk >= 30 needed to support manifest queries tag
+    // NOTE: api 26 orientation error fix: https://stackoverflow.com/a/52426009/1279056
+    // NOTE: set api to 26 to fix text scroll speed and crashes on samsung
     targetSdkVersion = 26 // set target api = 26 to fix Android 8.0 error: "Only fullscreen opaque activities can request orientation"
-    compileSdkVersion = 30
+    compileSdkVersion = 33
     buildToolsVersion = '30.0.3'
     kotlinVersion = '1.5.30'
     kotlinCoreVersion = '1.6.0'
@@ -45,6 +47,11 @@ project.ext {
     // amazonExoplayerVersion = '2.13.3' // New
      amazonExoplayerVersion = '2.10.6'
     amazonExoplayerJitpackVersion = 'amazon~r2.12.1-SNAPSHOT'
+    // playServicesCronetVersion = '18.0.1'
+    // cronetApiVersion = '101.4951.41'
+    // cronetApiVersion = '98.4758.101'
+    cronetApiVersion = '75.3770.101'
+    cronetOkHttpVersion = '0.1.0'
     
     espressoVersion = '3.2.0'
     retrofitVersion = '2.5.0'
@@ -97,7 +104,8 @@ project.ext {
     mockitoVersion = '3.7.7'
     // End My commons-io deps (Android 4.3 fix)
     
-    workVersion = '2.5.0'
+    workVersion = '2.8.1'
+    guavaVersion = '31.1-android' // Work library deps
     liveDataVersion = '2.1.0'
     browserXVersion = '1.3.0'
 
