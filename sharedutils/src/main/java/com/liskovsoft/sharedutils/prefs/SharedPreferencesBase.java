@@ -12,10 +12,10 @@ public class SharedPreferencesBase {
 
     public static void setSharedPrefPrefixName(Context context,
                                                @Nullable String prefixName) {
-        PreferenceManager.getDefaultSharedPreferences(context)
+        boolean result = PreferenceManager.getDefaultSharedPreferences(context)
                 .edit()
                 .putString("pref_prefix_name", prefixName)
-                .apply();
+                .commit();
     }
 
     public static @Nullable String getPrefixPrefName(Context context) {
