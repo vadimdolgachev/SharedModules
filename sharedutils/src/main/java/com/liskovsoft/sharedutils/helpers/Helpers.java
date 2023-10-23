@@ -37,6 +37,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.WindowManager.LayoutParams;
+import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.inputmethod.InputMethodManager;
 import androidx.annotation.Nullable;
 import com.google.gson.Gson;
@@ -97,6 +98,7 @@ public final class Helpers {
     // https://unicode-table.com/en/
     // https://www.compart.com/en/unicode/
     public static final String THUMB_UP = "\uD83D\uDC4D";
+    public static final String THUMB_DOWN = "\uD83D\uDC4E";
     //public static final String HOURGLASS = "⌛";
     public static final String HOURGLASS = "\u231B";
     private static DateFormat sDateFormat;
@@ -151,6 +153,7 @@ public final class Helpers {
     /**
      * Source: https://stackoverflow.com/questions/16704597/how-do-you-get-the-user-defined-device-name-in-android
      */
+    @SuppressLint("MissingPermission")
     public static String getUserDeviceName(Context context) {
         // 1) No need special permissions
         String bluetoothName = Settings.System.getString(context.getContentResolver(), "bluetooth_name");
@@ -458,14 +461,15 @@ public final class Helpers {
     }
 
     public static boolean isAndroidTVLauncher(Context context) {
-        return  isPackageExists(context, "com.google.android.leanbacklauncher") ||
+        return  isPackageExists(context, "com.amazon.tv.leanbacklauncher") || // port of the official Android TV launcher (https://github.com/tsynik/LeanbackLauncher)
+                isPackageExists(context, "com.google.android.leanbacklauncher") ||
                 isPackageExists(context, "com.google.android.tvlauncher") || // Android TV 10
                 isPackageExists(context, "com.google.android.apps.tv.launcherx"); // Google TV Home
     }
 
-    public static boolean isAndroidTVRecommendations(Context context) {
-        return isPackageExists(context, "com.google.android.leanbacklauncher.recommendations");
-    }
+    //public static boolean isAndroidTVRecommendations(Context context) {
+    //    return isPackageExists(context, "com.google.android.leanbacklauncher.recommendations");
+    //}
 
     public static boolean isATVChannelsSupported(Context context) {
         return VERSION.SDK_INT >= 26 && isAndroidTVLauncher(context);
@@ -489,7 +493,7 @@ public final class Helpers {
             return false;
         }
 
-        return context.getPackageManager().hasSystemFeature("android.hardware.touchscreen");
+        return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN);
     }
 
     public static boolean isAndroidTV(Context context) {
@@ -579,7 +583,7 @@ public final class Helpers {
         return false;
     }
 
-    public static boolean equals(String first, String second) {
+    public static boolean equals(Object first, Object second) {
         if (first == null && second == null) {
             return true;
         }
@@ -1094,7 +1098,13 @@ public final class Helpers {
             return -1;
         }
 
-        return Integer.parseInt(numString);
+        try {
+            return Integer.parseInt(numString);
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+        }
+
+        return -1;
     }
 
     public static long parseLong(String numString) {
@@ -1138,12 +1148,26 @@ public final class Helpers {
         return result != -1 ? result : defaultValue;
     }
 
-    public static String parseStr(String[] arr, int index) {
+    public static long parseLong(String[] arr, int index, long defaultValue) {
         if (arr == null || arr.length <= index || index < 0) {
-            return null;
+            return defaultValue;
         }
 
-        return parseStr(arr[index]);
+        long result = parseLong(arr[index]);
+        return result != -1 ? result : defaultValue;
+    }
+
+    public static String parseStr(String[] arr, int index) {
+        return parseStr(arr, index, null);
+    }
+
+    public static String parseStr(String[] arr, int index, String defaultValue) {
+        if (arr == null || arr.length <= index || index < 0) {
+            return defaultValue;
+        }
+
+        String result = parseStr(arr[index]);
+        return result != null ? result : defaultValue;
     }
 
     public static boolean parseBoolean(String[] arr, int index) {
@@ -1167,6 +1191,55 @@ public final class Helpers {
         return !floatEquals(result, -1) ? result : defaultValue;
     }
 
+    public static List<Integer> parseIntList(String[] arr, int index) {
+        String list = parseStr(arr, index);
+        List<Integer> result = new ArrayList<>();
+
+        if (list != null) {
+            String[] listArr = splitArray(list);
+
+            for (String item : listArr) {
+                result.add(parseInt(item));
+            }
+        }
+
+        return result;
+    }
+
+    public static List<Long> parseLongList(String[] arr, int index) {
+        String list = parseStr(arr, index);
+        List<Long> result = new ArrayList<>();
+
+        if (list != null) {
+            String[] listArr = splitArray(list);
+
+            for (String item : listArr) {
+                result.add(parseLong(item));
+            }
+        }
+
+        return result;
+    }
+
+    public static List<String> parseStrList(String[] arr, int index) {
+        String list = parseStr(arr, index);
+        List<String> result = new ArrayList<>();
+
+        if (list != null) {
+            String[] listArr = splitArray(list);
+
+            for (String item : listArr) {
+                result.add(item);
+            }
+        }
+
+        return result;
+    }
+
+    public static String[] parseArray(String[] arr, int index) {
+        return splitArray(parseStr(arr, index));
+    }
+
     public static String[] splitArrayLegacy(String arr) {
         return splitArrayLegacy(split(ARRAY_DELIM, arr), arr);
     }
@@ -1177,6 +1250,10 @@ public final class Helpers {
 
     public static String mergeArray(Object... items) {
         return Helpers.merge(ARRAY_DELIM, items);
+    }
+
+    public static <T> String mergeList(List<T> list) {
+        return mergeArray(list.toArray());
     }
 
     public static String[] splitObjectLegacy(String obj) {
@@ -1191,7 +1268,7 @@ public final class Helpers {
         return Helpers.merge(OBJECT_DELIM, params);
     }
 
-    private static String[] split(String delim, String data) {
+    public static String[] split(String delim, String data) {
         if (data == null) {
             return null;
         }
@@ -1204,7 +1281,7 @@ public final class Helpers {
         return data.split(Pattern.quote(delim));
     }
 
-    private static String merge(String delim, Object... params) {
+    public static String merge(String delim, Object... params) {
         if (params == null) {
             return null;
         }
@@ -1407,21 +1484,25 @@ public final class Helpers {
      * @return removed items (if any) or null (if nothing removed)
      */
     public static <T> List<T> removeIf(Collection<T> collection, Filter<T> filter) {
-        if (collection == null || filter == null || collection.getClass().getName().contains("UnmodifiableList")) {
+        if (collection == null || filter == null) {
             return null;
         }
 
         List<T> removed = null;
-        final Iterator<T> each = collection.iterator();
-        while (each.hasNext()) {
-            T next = each.next();
-            if (filter.test(next)) {
-                each.remove();
-                if (removed == null) {
-                    removed = new ArrayList<>();
+        try {
+            final Iterator<T> each = collection.iterator();
+            while (each.hasNext()) {
+                T next = each.next();
+                if (filter.test(next)) {
+                    each.remove();
+                    if (removed == null) {
+                        removed = new ArrayList<>();
+                    }
+                    removed.add(next);
                 }
-                removed.add(next);
             }
+        } catch (UnsupportedOperationException e) { // read only collection
+            e.printStackTrace();
         }
 
         return removed;
@@ -1756,5 +1837,22 @@ public final class Helpers {
         }
 
         return builder.toString();
+    }
+
+    /**
+     * https://developer.amazon.com/docs/fire-tv/implement-voiceview-accessibility-features-fire-os.html
+     */
+    public static void describedBy(View view, Integer... ids) {
+        if (Build.VERSION.SDK_INT >= 19) {
+            // You can set extras on a button which is described by some
+            // static text elsewhere on the screen as follows.
+            view.setAccessibilityDelegate(new View.AccessibilityDelegate() {
+                public void onInitializeAccessibilityNodeInfo(View host, AccessibilityNodeInfo info) {
+                    super.onInitializeAccessibilityNodeInfo(host, info);
+                    info.getExtras().putString("com.amazon.accessibility.describedBy", Helpers.merge(" ", (Object[]) ids));
+                    info.setEnabled(host.isEnabled());
+                }
+            });
+        }
     }
 }

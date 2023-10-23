@@ -24,9 +24,10 @@ object CronetManager {
             try {
                 engine = NativeCronetProvider(context)
                     .createBuilder()
-                    //.enableQuic(true)
-                    //.enableHttp2(true)
+                    .enableQuic(true)
+                    .enableHttp2(true)
                     //.enableBrotli(true)
+                    //.addQuicHint("youtube.com", 80, 80)
                     .build()
             } catch (e: UnsatisfiedLinkError) {
                 // Fatal Exception: java.lang.UnsatisfiedLinkError

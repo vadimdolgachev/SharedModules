@@ -17,6 +17,7 @@ import java.util.List;
 public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloaderListener {
     private static final String TAG = AppUpdateChecker.class.getSimpleName();
     private static final int FRESH_TIME_MS = 15 * 60 * 1_000; // 15 minutes
+    private static final int MIN_APK_SIZE_BYTES = 20_000_000; // 20 MB
     private final Context mContext;
     private final AppVersionChecker mVersionChecker;
     private final AppDownloader mDownloader;
@@ -26,6 +27,10 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
     private String mLatestVersionName;
 
     public AppUpdateChecker(Context context, AppUpdateCheckerListener listener) {
+        this(context, listener, MIN_APK_SIZE_BYTES);
+    }
+
+    public AppUpdateChecker(Context context, AppUpdateCheckerListener listener, int minApkSizeBytes) {
         Log.d(TAG, "Starting...");
 
         FileHelpers.checkCachePermissions(context); // should be an Activity context
@@ -33,7 +38,7 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
         mContext = context.getApplicationContext();
         mListener = listener;
         mVersionChecker = new AppVersionChecker(mContext, this);
-        mDownloader = new AppDownloader(mContext, this);
+        mDownloader = new AppDownloader(mContext, this, minApkSizeBytes);
         mSettingsManager = new SettingsManager(mContext);
 
         //  Cleanup the storage. I don't want to accidentally install old version.
@@ -108,7 +113,7 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
                 mSettingsManager.setLatestVersionNumber(latestVersionNumber);
 
                 if (latestVersionNumber == mSettingsManager.getLatestVersionNumber() &&
-                        FileHelpers.isFreshFile(mSettingsManager.getApkPath(), FRESH_TIME_MS)) {
+                        checkApk(mSettingsManager.getApkPath())) {
                     mListener.onUpdateFound(latestVersionName, changelog, mSettingsManager.getApkPath());
                 } else {
                     mDownloader.download(downloadUris);
@@ -126,14 +131,16 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
 
     @Override
     public void onApkDownloaded(String path) {
-        if (path != null) {
-            mSettingsManager.setApkPath(path);
-
-            Log.d(TAG, "App update received. Apk path: " + path);
-            Log.d(TAG, "App update received. Changelog: " + mChangeLog);
-
-            mListener.onUpdateFound(mLatestVersionName, mChangeLog, path);
+        if (!checkApk(path)) {
+            return;
         }
+
+        mSettingsManager.setApkPath(path);
+
+        Log.d(TAG, "App update received. Apk path: " + path);
+        Log.d(TAG, "App update received. Changelog: " + mChangeLog);
+
+        mListener.onUpdateFound(mLatestVersionName, mChangeLog, path);
     }
 
     @Override
@@ -180,5 +187,10 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
 
     public String getPreferredHost() {
         return mSettingsManager.getPreferredHost();
+    }
+
+    private boolean checkApk(String path) {
+        // package is not broken
+        return FileHelpers.isFreshFile(path, FRESH_TIME_MS) && mContext.getPackageManager().getPackageArchiveInfo(path, 0) != null;
     }
 }

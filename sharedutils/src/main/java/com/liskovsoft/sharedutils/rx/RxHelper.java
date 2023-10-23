@@ -134,6 +134,10 @@ public class RxHelper {
         return runAsyncUser(callback, null, null);
     }
 
+    public static Disposable runUser(Runnable callback) {
+        return runAsyncUser(() -> {}, null, callback);
+    }
+
     public static Disposable runAsyncUser(Runnable callback, @Nullable OnError onError, @Nullable Runnable onFinish) {
         return Completable.fromRunnable(callback)
                 .subscribeOn(Schedulers.io())
@@ -230,6 +234,30 @@ public class RxHelper {
                 // Essential part to notify about problems. Don't remove!
                 onError(emitter, "fromNullable result is null");
                 Log.e(TAG, "fromNullable result is null");
+            }
+        });
+    }
+
+    @SafeVarargs
+    public static <T> Observable<T> fromMultiNullable(Callable<T>... callbacks) {
+        return create(emitter -> {
+            boolean success = false;
+            for (Callable<T> callback : callbacks) {
+                T result = callback.call();
+
+                if (result != null) {
+                    emitter.onNext(result);
+                    success = true;
+                }
+            }
+
+            if (success) {
+                emitter.onComplete();
+            } else {
+                // Be aware of OnErrorNotImplementedException exception if error handler not implemented!
+                // Essential part to notify about problems. Don't remove!
+                onError(emitter, "fromMultiNullable result is null");
+                Log.e(TAG, "fromMultiNullable result is null");
             }
         });
     }

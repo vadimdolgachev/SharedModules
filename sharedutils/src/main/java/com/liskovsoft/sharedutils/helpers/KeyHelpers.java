@@ -1,6 +1,7 @@
 package com.liskovsoft.sharedutils.helpers;
 
 import android.app.Activity;
+import android.content.res.Configuration;
 import android.view.KeyEvent;
 import android.widget.EditText;
 
@@ -108,6 +109,11 @@ public class KeyHelpers {
         return keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE;
     }
 
+    public static boolean isNavigationKey(int keyCode) {
+        return keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
+                keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN;
+    }
+
     /**
      * G20s fix (Enter mapped to OK): show soft keyboard on textview click<br/>
      * More info: https://stackoverflow.com/questions/1489852/android-handle-enter-in-an-edittext
@@ -119,6 +125,11 @@ public class KeyHelpers {
 
         for (EditText editField : editFields) {
             editField.setOnKeyListener((v, keyCode, event) -> {
+                // Skip physical keyboard. Cause bugs. Soft keyboard won't pop in.
+                //if (v.getResources().getConfiguration().keyboard == Configuration.KEYBOARD_QWERTY) {
+                //    return false;
+                //}
+
                 if (keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
                     // Perform action on key press
                     if (event.getAction() == KeyEvent.ACTION_DOWN) {
