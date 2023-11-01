@@ -301,10 +301,10 @@ public final class OkHttpCommons {
             // Profiler could cause OutOfMemoryError when testing.
             // Also outputs to logcat tons of info.
             // If you enable it to all requests - expect slowdowns.
-            if (enableProfiler) {
-                addProfiler(okBuilder);
-            }
-            addLogger(okBuilder);
+//            if (enableProfiler) {
+//                addProfiler(okBuilder);
+//            }
+//            addLogger(okBuilder);
         }
     }
 
