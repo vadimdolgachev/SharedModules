@@ -15,6 +15,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.ResolveInfo;
 import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.graphics.Point;
 import android.media.AudioManager;
 import android.media.MediaCodecInfo;
@@ -35,11 +36,15 @@ import android.view.Display;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.view.WindowManager.LayoutParams;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.inputmethod.InputMethodManager;
+
 import androidx.annotation.Nullable;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.liskovsoft.sharedutils.mylogger.Log;
@@ -66,13 +71,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.Callable;
@@ -83,9 +89,11 @@ public final class Helpers {
     private static final String TAG = Helpers.class.getSimpleName();
     public static final int REMOVE_PACKAGE_CODE = 521;
     private static final String ARRAY_DELIM = "%AR%";
-    private static final String OBJECT_DELIM = "%OB%";
+    private static final String DATA_DELIM = "%OB%";
+    private static final String PAIR_DELIM = "%PR%";
     private static final String LEGACY_ARRAY_DELIM = "|";
-    private static final String LEGACY_OBJECT_DELIM = ",";
+    private static final String LEGACY_DATA_DELIM = ",";
+    private static final String OBJ_DELIM = "&vi;";
     private static final String MIME_VP9 = "video/x-vnd.on2.vp9";
     private static final String MIME_AV1 = "video/av01";
     private static final Pattern URL_PREFIX = Pattern.compile("^[a-z.]+://.+$");
@@ -94,11 +102,15 @@ public final class Helpers {
     private static Boolean sIsAV1Supported;
     private static int sVP9MaxHeight;
     private static int sAV1MaxHeight;
+    private static long sCachedRamSize = -1;
     private static Random sRandom;
     // https://unicode-table.com/en/
     // https://www.compart.com/en/unicode/
     public static final String THUMB_UP = "\uD83D\uDC4D";
     public static final String THUMB_DOWN = "\uD83D\uDC4E";
+    public static final String NON_BREAKING_SPACE = "\u00A0";
+    public static final String SPEECH = "\uD83D\uDDE8";
+    public static final String SPEAKER = "\uD83D\uDD08";
     //public static final String HOURGLASS = "⌛";
     public static final String HOURGLASS = "\u231B";
     private static DateFormat sDateFormat;
@@ -129,7 +141,7 @@ public final class Helpers {
     public static InputStream appendStream(InputStream first, InputStream second) {
         return FileHelpers.appendStream(first, second);
     }
-    
+
     public static <T> T[] appendArray(T[] first, T[] second) {
         T[] result = Arrays.copyOf(first, first.length + second.length);
         System.arraycopy(second, 0, result, first.length, second.length);
@@ -507,6 +519,21 @@ public final class Helpers {
                 || pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK));
     }
 
+    public static String findFirst(String input, Pattern pattern) {
+        String regExpVal = null;
+
+        Matcher matcher = pattern.matcher(input);
+        if (matcher.find()) {
+            if (matcher.groupCount() >= 1) {
+                regExpVal = matcher.group(1);
+            } else {
+                regExpVal = matcher.group(0); // all match
+            }
+        }
+
+        return regExpVal;
+    }
+
     public static boolean matchAll(String input, Pattern... patterns) {
         for (Pattern pattern : patterns) {
             Matcher matcher = pattern.matcher(input);
@@ -536,10 +563,66 @@ public final class Helpers {
         View decorView = activity.getWindow().getDecorView();
 
         if (VERSION.SDK_INT >= 19) {
-            decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+            // https://developer.android.com/codelabs/gesture-navigation
+            // Keep navigation bar in gesture mode to support gestures
+            int hideNavigation = isEdgeToEdgeEnabled(activity) != 2 ? View.SYSTEM_UI_FLAG_HIDE_NAVIGATION : 0;
+            decorView.setSystemUiVisibility(hideNavigation | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         } else {
             decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_FULLSCREEN);
         }
+    }
+
+    /**
+     * More advance approach. Including automobile systems support.
+     */
+    public static void makeActivityFullscreen2(Activity activity) {
+        if (Build.VERSION.SDK_INT >= 30) {
+            activity.getWindow().setDecorFitsSystemWindows(false);
+            WindowInsetsController controller = activity.getWindow().getInsetsController();
+            // https://developer.android.com/codelabs/gesture-navigation
+            // Keep navigation bar in gesture mode to support gestures
+            if (controller != null && isEdgeToEdgeEnabled(activity) != 2) {
+                controller.hide(WindowInsets.Type.systemBars());
+                controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            }
+        } else {
+            // https://developer.android.com/codelabs/gesture-navigation
+            // Keep navigation bar in gesture mode to support gestures
+            int hideNavigation = isEdgeToEdgeEnabled(activity) != 2 ? (View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION) : 0;
+            int sticky = Build.VERSION.SDK_INT >= 19 ? View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY : 0;
+            activity.getWindow().getDecorView().setSystemUiVisibility(hideNavigation | sticky | View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_FULLSCREEN);
+        }
+
+        if (VERSION.SDK_INT >= 19) {
+            // Make status and nav bars transparent
+            // <item name="android:windowTranslucentStatus">false</item>
+            // <item name="android:windowTranslucentNavigation">false</item>
+            activity.getWindow().setFlags(LayoutParams.FLAG_TRANSLUCENT_STATUS, LayoutParams.FLAG_TRANSLUCENT_STATUS);
+            activity.getWindow().setFlags(LayoutParams.FLAG_TRANSLUCENT_NAVIGATION, LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
+        }
+    }
+
+    public static void addFullscreenListener(Activity activity) {
+        activity.getWindow().getDecorView().setOnSystemUiVisibilityChangeListener(visibility -> {
+            if ((visibility & View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
+                makeActivityFullscreen2(activity);
+            }
+        });
+    }
+
+    /**
+     * 0 : Navigation is displaying with 3 buttons<br/>
+     * 1 : Navigation is displaying with 2 button(Android P navigation mode)<br/>
+     * 2 : Full screen gesture(Gesture on android Q)<br/>
+     * <a href="https://developer.android.com/codelabs/gesture-navigation">tutorial</a>
+     */
+    private static int isEdgeToEdgeEnabled(Context context) {
+        Resources resources = context.getResources();
+        int resourceId = resources.getIdentifier("config_navBarInteractionMode", "integer", "android");
+        if (resourceId > 0) {
+            return resources.getInteger(resourceId);
+        }
+        return 0;
     }
 
     @SuppressLint("SourceLockedOrientationActivity")
@@ -986,18 +1069,29 @@ public final class Helpers {
         }
     }
 
-    public static int getDeviceRam(Context context) {
-        if (context == null || VERSION.SDK_INT < 16) {
+    public static long getDeviceRam(Context context) {
+        if (sCachedRamSize != -1) {
+            return sCachedRamSize;
+        }
+
+        if (context == null) {
             return -1;
         }
+
+        long result;
 
         ActivityManager actManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
         ActivityManager.MemoryInfo memInfo = new ActivityManager.MemoryInfo();
         if (actManager != null) {
             actManager.getMemoryInfo(memInfo);
-        } else return 500000000;//safe value for devices with 1gb or more...
+            result = memInfo.totalMem;
+        } else {
+            result = 500_000_000; // safe value for devices with 1gb or more...
+        }
 
-        return (int) (memInfo.totalMem / 18);
+        sCachedRamSize = result;
+
+        return result;
     }
 
     public static String replace(String content, Pattern oldVal, String newVal) {
@@ -1192,56 +1286,79 @@ public final class Helpers {
     }
 
     public static List<Integer> parseIntList(String[] arr, int index) {
-        String list = parseStr(arr, index);
-        List<Integer> result = new ArrayList<>();
-
-        if (list != null) {
-            String[] listArr = splitArray(list);
-
-            for (String item : listArr) {
-                result.add(parseInt(item));
-            }
-        }
-
-        return result;
+        return parseList(arr, index, Helpers::parseInt);
     }
 
     public static List<Long> parseLongList(String[] arr, int index) {
-        String list = parseStr(arr, index);
-        List<Long> result = new ArrayList<>();
+        return parseList(arr, index, Helpers::parseLong);
+    }
 
-        if (list != null) {
-            String[] listArr = splitArray(list);
+    public static List<String> parseStrList(String[] arr, int index) {
+        return parseList(arr, index, Helpers::parseStr);
+    }
+
+    public interface Parser<T> {
+        T parse(String spec);
+    }
+
+    public static <T> List<T> parseList(String[] arr, int index, Parser<T> itemParser) {
+        return parseList(parseStr(arr, index), itemParser);
+    }
+
+    public static <T> List<T> parseList(String spec, Parser<T> itemParser) {
+        List<T> result = new ArrayList<>();
+
+        if (spec != null) {
+            String[] listArr = splitArray(spec);
 
             for (String item : listArr) {
-                result.add(parseLong(item));
+                result.add(itemParser.parse(item));
             }
         }
 
         return result;
     }
 
-    public static List<String> parseStrList(String[] arr, int index) {
-        String list = parseStr(arr, index);
-        List<String> result = new ArrayList<>();
+    public static <T, K> Map<T, K> parseMap(String[] arr, int index, Parser<T> keyParser, Parser<K> valueParser) {
+        return parseMap(parseStr(arr, index), keyParser, valueParser);
+    }
 
-        if (list != null) {
-            String[] listArr = splitArray(list);
+    public static <T, K> Map<T, K> parseMap(String spec, Parser<T> keyParser, Parser<K> valueParser) {
+        Map<T, K> result = new HashMap<>();
+
+        if (spec != null) {
+            String[] listArr = splitArray(spec);
 
             for (String item : listArr) {
-                result.add(item);
+                //String[] keyValPair = item.split("\\|");
+                String[] keyValPair = split(PAIR_DELIM, item);
+
+                if (keyValPair.length != 2) {
+                    continue;
+                }
+
+                result.put(keyParser.parse(keyValPair[0]), valueParser.parse(keyValPair[1]));
             }
         }
 
         return result;
+    }
+
+    public static <T> T parseItem(String[] arr, int index, Parser<T> parser) {
+        return parseItem(arr, index, parser, null);
+    }
+
+    public static <T> T parseItem(String[] arr, int index, Parser<T> parser, T defaultValue) {
+        if (arr == null || arr.length <= index || index < 0) {
+            return defaultValue;
+        }
+
+        T result = parser.parse(arr[index]);
+        return result != null ? result : defaultValue;
     }
 
     public static String[] parseArray(String[] arr, int index) {
         return splitArray(parseStr(arr, index));
-    }
-
-    public static String[] splitArrayLegacy(String arr) {
-        return splitArrayLegacy(split(ARRAY_DELIM, arr), arr);
     }
 
     public static String[] splitArray(String arr) {
@@ -1249,26 +1366,56 @@ public final class Helpers {
     }
 
     public static String mergeArray(Object... items) {
-        return Helpers.merge(ARRAY_DELIM, items);
+        return merge(ARRAY_DELIM, items);
     }
 
     public static <T> String mergeList(List<T> list) {
         return mergeArray(list.toArray());
     }
 
-    public static String[] splitObjectLegacy(String obj) {
-        return splitObjectLegacy(split(OBJECT_DELIM, obj), obj);
+    public static <T, K> String mergeMap(Map<T, K> map) {
+        List<String> pairs = new ArrayList<>();
+        for (Entry<T, K> pair : map.entrySet()) {
+            //pairs.add(String.format("%s|%s", pair.getKey(), pair.getValue()));
+            pairs.add(merge(PAIR_DELIM, pair.getKey(), pair.getValue()));
+        }
+
+        return mergeList(pairs);
     }
 
-    public static String[] splitObject(String obj) {
-        return split(OBJECT_DELIM, obj);
+    public static String[] splitData(String data) {
+        return split(DATA_DELIM, data);
     }
 
-    public static String mergeObject(Object... params) {
-        return Helpers.merge(OBJECT_DELIM, params);
+    public static String mergeData(Object... items) {
+        return merge(DATA_DELIM, items);
     }
 
-    public static String[] split(String delim, String data) {
+    public static String[] splitArrayLegacy(String arr) {
+        if (arr != null && (arr.contains(ARRAY_DELIM) || arr.contains(DATA_DELIM))) {
+            return split(ARRAY_DELIM, arr);
+        }
+
+        return split(LEGACY_ARRAY_DELIM, arr);
+    }
+
+    public static String[] splitDataLegacy(String data) {
+        if (data != null && (data.contains(DATA_DELIM) || data.contains(ARRAY_DELIM))) {
+            return split(DATA_DELIM, data);
+        }
+
+        return split(LEGACY_DATA_DELIM, data);
+    }
+
+    public static String[] splitObj(String obj) {
+        return split(OBJ_DELIM, obj);
+    }
+
+    public static String mergeObj(Object... items) {
+        return merge(OBJ_DELIM, items);
+    }
+
+    private static String[] split(String delim, String data) {
         if (data == null) {
             return null;
         }
@@ -1281,7 +1428,7 @@ public final class Helpers {
         return data.split(Pattern.quote(delim));
     }
 
-    public static String merge(String delim, Object... params) {
+    private static String merge(String delim, Object... params) {
         if (params == null) {
             return null;
         }
@@ -1295,6 +1442,12 @@ public final class Helpers {
         for (Object param : params) {
             if (sb.length() != 0) {
                 sb.append(delim);
+            }
+
+            if (param instanceof List) {
+                param = mergeList((List<?>) param);
+            } else if (param instanceof Map) {
+                param = mergeMap((Map<?, ?>) param);
             }
 
             sb.append(param);
@@ -1332,24 +1485,15 @@ public final class Helpers {
         return outValue.resourceId;
     }
 
-    public static <T> T firstNonNull(T obj, T defObj) {
-        return obj != null ? obj : defObj;
-    }
-
-    private static String[] splitArrayLegacy(String[] split, String arr) {
-        if (split != null && split.length == 1) {
-            return split(LEGACY_ARRAY_DELIM, arr);
+    @SafeVarargs
+    public static <T> T firstNonNull(T... objects) {
+        for (T obj : objects) {
+            if (obj != null) {
+                return obj;
+            }
         }
 
-        return split;
-    }
-
-    private static String[] splitObjectLegacy(String[] split, String obj) {
-        if (split != null && split.length == 1) {
-            return split(LEGACY_OBJECT_DELIM, obj);
-        }
-
-        return split;
+        return null;
     }
 
     public static int[] range(int start, int end, int step) {
@@ -1360,6 +1504,24 @@ public final class Helpers {
         for (int i = 0; i < size; i++) {
              result[i] = value;
              value += step;
+        }
+
+        return result;
+    }
+
+    public static float[] range(float origStart, float origEnd, float origStep) {
+        float multiplexer = 1000f;
+        int start = (int) (origStart * multiplexer);
+        int end = (int) (origEnd * multiplexer);
+        int step = (int) (origStep * multiplexer);
+
+        int size = (end - start) / step + 1;
+        float[] result = new float[size];
+        int value = start;
+
+        for (int i = 0; i < size; i++) {
+            result[i] = value / multiplexer;
+            value += step;
         }
 
         return result;
@@ -1490,18 +1652,19 @@ public final class Helpers {
 
         List<T> removed = null;
         try {
-            final Iterator<T> each = collection.iterator();
-            while (each.hasNext()) {
-                T next = each.next();
+            for (T next : collection) {
                 if (filter.test(next)) {
-                    each.remove();
                     if (removed == null) {
                         removed = new ArrayList<>();
                     }
                     removed.add(next);
                 }
             }
+            if (removed != null) {
+                collection.removeAll(removed);
+            }
         } catch (UnsupportedOperationException e) { // read only collection
+            removed = null;
             e.printStackTrace();
         }
 
@@ -1521,7 +1684,7 @@ public final class Helpers {
 
         return false;
     }
-    
+
     public static <T> List<T> filter(Collection<T> collection, Filter<T> filter) {
         if (collection == null || filter == null) {
             return null;
@@ -1854,5 +2017,48 @@ public final class Helpers {
                 }
             });
         }
+    }
+
+    /**
+     * Trying to split while keeping the words not divided.
+     */
+    public static List<String> splitStringBySize(String str, int size) {
+        List<String> split = new ArrayList<>();
+
+        Scanner scanner = new Scanner(str).useDelimiter(" ");
+
+        StringBuilder builder = new StringBuilder();
+
+        while (scanner.hasNext()) {
+            String aWord = scanner.next();
+
+            if (builder.length() != 0) {
+                builder.append(" ");
+            }
+
+            builder.append(aWord);
+
+            if (builder.length() > size) {
+                split.add(builder.toString());
+                builder = new StringBuilder();
+            }
+        }
+
+        if (builder.length() != 0) {
+            split.add(builder.toString());
+        }
+
+        scanner.close();
+
+        return split;
+    }
+
+    public static boolean isJUnitTest() {
+        for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
+            if (element.getClassName().startsWith("org.junit.")) {
+                return true;
+            }
+        }
+        return false;
     }
 }

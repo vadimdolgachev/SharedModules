@@ -13,15 +13,16 @@ project.ext {
     targetSdkVersion = 26 // set target api = 26 to fix Android 8.0 error: "Only fullscreen opaque activities can request orientation"
     compileSdkVersion = 33
     buildToolsVersion = '30.0.3'
-    kotlinVersion = '1.6.21' // https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-stdlib-jdk7
-    kotlinxVersion = '1.6.4' // https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-android
-    // latest core without 'resource android:attr/lStar not found' error
-    kotlinCoreVersion = '1.6.0' // https://mvnrepository.com/artifact/androidx.core/core-ktx
     gradleVersion = '6.9.1' // https://developer.android.com/studio/releases/gradle-plugin#updating-gradle
     androidGradleVersion = '4.0.0+' // last version compatible with IntellJ 2020.3
     
     testSupportLibraryVersion = '0.5'
     testXSupportLibraryVersion = '1.1.0'
+    kotlinVersion = '1.6.21' // https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-stdlib-jdk7
+    kotlinxVersion = '1.6.4' // https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-android
+    // NOTE: Kotlin core 1.7.0 has 'resource android:attr/lStar not found' error (dialog black background bug)
+    kotlinCoreXVersion = '1.8.0' // https://mvnrepository.com/artifact/androidx.core/core-ktx
+    coreXLibraryVersion = '1.9.0' // the latest compatible with kotlin core and cronet 119
     appCompatXLibraryVersion = '1.2.0' // old: 1.0.0
     leanbackXLibraryVersion = '1.0.0'
     annotationXLibraryVersion = '1.1.0'
@@ -50,9 +51,10 @@ project.ext {
      amazonExoplayerVersion = '2.10.6'
     amazonExoplayerJitpackVersion = 'amazon~r2.12.1-SNAPSHOT'
     // playServicesCronetVersion = '18.0.1'
-    // cronetApiVersion = '101.4951.41'
+    // cronetApiVersion = '119.6045.31' // for testing
+    // cronetApiVersion = '105.5195.68' // latest version with Android 7.0 support
     // cronetApiVersion = '98.4758.101' // fast too
-    cronetApiVersion = '75.3770.101' // the fastest one
+    cronetApiVersion = '75.3770.101' // the fastest one (best choice)
     cronetOkHttpVersion = '0.1.0'
     
     espressoVersion = '3.2.0'
@@ -113,4 +115,6 @@ project.ext {
 
     chatkitVersion = 'v0.4.1'
     gotevSpeechVersion = '1.1.2'
+
+    phoenixVersion = '3.0.0'
 }

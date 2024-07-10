@@ -25,6 +25,7 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
     private final SettingsManager mSettingsManager;
     private List<String> mChangeLog;
     private String mLatestVersionName;
+    private int mLatestVersionNumber;
 
     public AppUpdateChecker(Context context, AppUpdateCheckerListener listener) {
         this(context, listener, MIN_APK_SIZE_BYTES);
@@ -41,8 +42,8 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
         mDownloader = new AppDownloader(mContext, this, minApkSizeBytes);
         mSettingsManager = new SettingsManager(mContext);
 
-        //  Cleanup the storage. I don't want to accidentally install old version.
-        FileHelpers.delete(mSettingsManager.getApkPath());
+        // Cleanup the storage. I don't want to accidentally install old version.
+        //FileHelpers.delete(mSettingsManager.getApkPath());
     }
 
     /**
@@ -109,8 +110,7 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
             if (downloadUris != null) {
                 mChangeLog = changelog;
                 mLatestVersionName = latestVersionName;
-                mSettingsManager.setLatestVersionName(latestVersionName);
-                mSettingsManager.setLatestVersionNumber(latestVersionNumber);
+                mLatestVersionNumber = latestVersionNumber;
 
                 if (latestVersionNumber == mSettingsManager.getLatestVersionNumber() &&
                         checkApk(mSettingsManager.getApkPath())) {
@@ -122,8 +122,9 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
         } else {
             // No update is needed.
             mSettingsManager.setLastCheckedMs(System.currentTimeMillis());
-            //  Cleanup the storage. I don't want to accidentally install old version.
-            FileHelpers.delete(mSettingsManager.getApkPath());
+
+            // Cleanup the storage. I don't want to accidentally install old version.
+            //FileHelpers.delete(mSettingsManager.getApkPath());
 
             mListener.onUpdateError(new IllegalStateException(AppUpdateCheckerListener.LATEST_VERSION));
         }
@@ -136,6 +137,8 @@ public class AppUpdateChecker implements AppVersionCheckerListener, AppDownloade
         }
 
         mSettingsManager.setApkPath(path);
+        mSettingsManager.setLatestVersionName(mLatestVersionName);
+        mSettingsManager.setLatestVersionNumber(mLatestVersionNumber);
 
         Log.d(TAG, "App update received. Apk path: " + path);
         Log.d(TAG, "App update received. Changelog: " + mChangeLog);

@@ -18,6 +18,7 @@ final public class GlobalPreferences extends SharedPreferencesBase {
     private final static String MESSAGE_AUTH_BODY = "message_auth_body";
     private final static String MEDIA_SERVICE_REFRESH_TOKEN = "media_service_refresh_token";
     private final static String MEDIA_SERVICE_ACCOUNT_DATA = "media_service_account_data";
+    private final static String OAUTH2_ACCOUNT_DATA = "oauth2_account_data";
     private final static String MEDIA_SERVICE_DATA = "media_service_data";
     private static final String RECOMMENDED_PLAYLIST_TYPE = "recommended_playlist_type";
     private static final String PREFERRED_LANGUAGE_DATA = "preferred_language_data";
@@ -27,12 +28,19 @@ final public class GlobalPreferences extends SharedPreferencesBase {
     private static final String ENABLE_DNS_OVER_HTTPS = "enable_dns_over_https";
     private static final String VISITOR_COOKIE = "visitor_cookie";
     private static final String HIDE_SHORTS_FROM_SUBSCRIPTIONS = "hide_shorts_from_subscriptions";
+    private static final String HIDE_SHORTS_FROM_TRENDING = "hide_shorts_from_trending";
     private static final String HIDE_STREAMS_FROM_SUBSCRIPTIONS = "hide_streams_from_subscriptions";
-    private static final String HIDE_SHORTS_EVERYWHERE = "hide_shorts_everywhere";
+    private static final String HIDE_WATCHED_FROM_HOME = "hide_watched_from_home";
+    private static final String HIDE_WATCHED_FROM_SUBSCRIPTIONS = "hide_watched_from_subscriptions";
     private static final String HIDE_SHORTS_FROM_HOME = "hide_shorts_from_home";
     private static final String HIDE_SHORTS_FROM_HISTORY = "hide_shorts_from_history";
+    private static final String HIDE_SHORTS_FROM_CHANNEL = "hide_shorts_from_channel";
     private static final String HIDE_UPCOMING = "hide_upcoming";
+    private static final String HIDE_UPCOMING_FROM_CHANNEL = "hide_upcoming_from_channel";
+    private static final String HIDE_UPCOMING_FROM_HOME = "hide_upcoming_from_home";
+    private static final String HIDE_UPCOMING_FROM_SUBSCRIPTIONS = "hide_upcoming_from_subscriptions";
     private static final String CONTENT_BLOCK_ALT_SERVER = "content_block_alt_server";
+    private static final String EXTENDED_HLS_FORMATS_ENABLED = "extended_hls_formats_enabled";
     private static final List<Runnable> sCallbacks = new CopyOnWriteArrayList<>(); // fix ConcurrentModificationException
 
     private GlobalPreferences(Context context) {
@@ -111,6 +119,14 @@ final public class GlobalPreferences extends SharedPreferencesBase {
         return getString(MEDIA_SERVICE_ACCOUNT_DATA, null);
     }
 
+    public void setOAuth2AccountData(String data) {
+        putString(OAUTH2_ACCOUNT_DATA, data);
+    }
+
+    public String getOAuth2AccountData() {
+        return getString(OAUTH2_ACCOUNT_DATA, null);
+    }
+
     public void setMediaServiceData(String data) {
         putString(MEDIA_SERVICE_DATA, data);
     }
@@ -159,12 +175,28 @@ final public class GlobalPreferences extends SharedPreferencesBase {
         return getBoolean(ENABLE_DNS_OVER_HTTPS, false);
     }
 
-    public void hideShortsEverywhere(boolean enable) {
-        putBoolean(HIDE_SHORTS_EVERYWHERE, enable);
+    public void hideWatchedFromHome(boolean enable) {
+        putBoolean(HIDE_WATCHED_FROM_HOME, enable);
     }
 
-    public boolean isHideShortsEverywhereEnabled() {
-        return getBoolean(HIDE_SHORTS_EVERYWHERE, false);
+    public boolean isHideWatchedFromHomeEnabled() {
+        return getBoolean(HIDE_WATCHED_FROM_HOME, false);
+    }
+
+    public void hideWatchedFromSubscriptions(boolean enable) {
+        putBoolean(HIDE_WATCHED_FROM_SUBSCRIPTIONS, enable);
+    }
+
+    public boolean isHideWatchedFromSubscriptionsEnabled() {
+        return getBoolean(HIDE_WATCHED_FROM_SUBSCRIPTIONS, false);
+    }
+
+    public void hideShortsFromChannel(boolean enable) {
+        putBoolean(HIDE_SHORTS_FROM_CHANNEL, enable);
+    }
+
+    public boolean isHideShortsFromChannelEnabled() {
+        return getBoolean(HIDE_SHORTS_FROM_CHANNEL, false);
     }
 
     public void hideShortsFromHome(boolean enable) {
@@ -183,6 +215,14 @@ final public class GlobalPreferences extends SharedPreferencesBase {
         return getBoolean(HIDE_SHORTS_FROM_SUBSCRIPTIONS, true);
     }
 
+    public void hideShortsFromTrending(boolean enable) {
+        putBoolean(HIDE_SHORTS_FROM_TRENDING, enable);
+    }
+
+    public boolean isHideShortsFromTrendingEnabled() {
+        return getBoolean(HIDE_SHORTS_FROM_TRENDING, true);
+    }
+
     public void hideStreamsFromSubscriptions(boolean enable) {
         putBoolean(HIDE_STREAMS_FROM_SUBSCRIPTIONS, enable);
     }
@@ -199,12 +239,28 @@ final public class GlobalPreferences extends SharedPreferencesBase {
         return getBoolean(HIDE_SHORTS_FROM_HISTORY, true);
     }
 
-    public void hideUpcoming(boolean enable) {
-        putBoolean(HIDE_UPCOMING, enable);
+    public void hideUpcomingFromChannel(boolean enable) {
+        putBoolean(HIDE_UPCOMING_FROM_CHANNEL, enable);
     }
 
-    public boolean isHideUpcomingEnabled() {
-        return getBoolean(HIDE_UPCOMING, false);
+    public boolean isHideUpcomingFromChannelEnabled() {
+        return getBoolean(HIDE_UPCOMING_FROM_CHANNEL, true);
+    }
+
+    public void hideUpcomingFromHome(boolean enable) {
+        putBoolean(HIDE_UPCOMING_FROM_HOME, enable);
+    }
+
+    public boolean isHideUpcomingFromHomeEnabled() {
+        return getBoolean(HIDE_UPCOMING_FROM_HOME, true);
+    }
+
+    public void hideUpcomingFromSubscriptions(boolean enable) {
+        putBoolean(HIDE_UPCOMING_FROM_SUBSCRIPTIONS, enable);
+    }
+
+    public boolean isHideUpcomingFromSubscriptionsEnabled() {
+        return getBoolean(HIDE_UPCOMING_FROM_SUBSCRIPTIONS, false);
     }
 
     public void enableContentBlockAltServer(boolean enable) {
@@ -213,5 +269,13 @@ final public class GlobalPreferences extends SharedPreferencesBase {
 
     public boolean isContentBlockAltServerEnabled() {
         return getBoolean(CONTENT_BLOCK_ALT_SERVER, false);
+    }
+
+    public void enableExtendedHlsFormats(boolean enable) {
+        putBoolean(EXTENDED_HLS_FORMATS_ENABLED, enable);
+    }
+
+    public boolean isExtendedHlsFormatsEnabled() {
+        return getBoolean(EXTENDED_HLS_FORMATS_ENABLED, false);
     }
 }

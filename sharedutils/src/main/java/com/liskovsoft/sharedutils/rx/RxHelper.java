@@ -16,6 +16,7 @@ import io.reactivex.schedulers.Schedulers;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -164,6 +165,10 @@ public class RxHelper {
                 );
     }
 
+    public static <T> void runBlocking(Observable<T> observable) {
+        observable.blockingSubscribe();
+    }
+
     /**
      * <a href="https://stackoverflow.com/questions/43525052/rxjava2-observable-take-throws-undeliverableexception">More info 1</a>
      * <a href="https://github.com/ReactiveX/RxJava/wiki/What's-different-in-2.0#error-handling">More info 2</a>
@@ -175,7 +180,7 @@ public class RxHelper {
                 return;
             }
             if ((e instanceof IllegalStateException) &&
-                    ((e.getCause() instanceof SocketException) || (e.getCause() instanceof ConnectException))) {
+                    ((e.getCause() instanceof SocketException) || (e.getCause() instanceof UnknownHostException))) {
                 // network problems (no internet, failed to connect etc)
                 Log.e(TAG, "Network error", e.getCause());
                 return;
