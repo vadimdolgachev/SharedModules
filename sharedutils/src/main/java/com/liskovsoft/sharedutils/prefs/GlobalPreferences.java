@@ -2,7 +2,6 @@ package com.liskovsoft.sharedutils.prefs;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import com.liskovsoft.sharedutils.helpers.Helpers;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -73,16 +72,6 @@ final public class GlobalPreferences extends SharedPreferencesBase {
 
     public static boolean isInitialized() {
         return sInstance != null && sInstance.getContext() != null;
-    }
-
-    public static String getVisitorCookie() {
-        return isInitialized() ? sInstance.getString(VISITOR_COOKIE, null) : null;
-    }
-
-    public static void setVisitorCookie(String visitorCookie) {
-        if (isInitialized()) {
-            sInstance.putString(VISITOR_COOKIE, visitorCookie);
-        }
     }
 
     public void setRecommendedPlaylistType(String type) {
