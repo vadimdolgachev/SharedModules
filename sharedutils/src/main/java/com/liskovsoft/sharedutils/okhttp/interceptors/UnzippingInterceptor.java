@@ -2,7 +2,10 @@ package com.liskovsoft.sharedutils.okhttp.interceptors;
 
 import okhttp3.Headers;
 import okhttp3.Interceptor;
+import okhttp3.MediaType;
+import okhttp3.Protocol;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 import okhttp3.internal.http.RealResponseBody;
 import okio.GzipSource;
 import okio.InflaterSource;
@@ -16,13 +19,20 @@ import java.util.zip.Inflater;
 public class UnzippingInterceptor implements Interceptor {
     @Override
     public Response intercept(Chain chain) throws IOException {
-        Response response = chain.proceed(chain.request());
+        Response response;
+
+        try {
+            response = chain.proceed(chain.request());
+        } catch (NullPointerException e) { // proxy error?
+            response = createEmptyResponse(chain);
+        }
+
         return unzip(response);
     }
 
     // copied from okhttp3.internal.http.HttpEngine (because is private)
     private Response unzip(final Response response) throws IOException {
-        if (response.body() == null) {
+        if (response == null || response.body() == null) {
             return response;
         }
 
@@ -51,5 +61,16 @@ public class UnzippingInterceptor implements Interceptor {
         } else {
             return response;
         }
+    }
+
+    private Response createEmptyResponse(Chain chain) {
+        Response.Builder builder = new Response.Builder();
+        builder.request(chain.request());
+        builder.protocol(Protocol.HTTP_1_1);
+        builder.code(204);
+        builder.message("Empty response");
+        builder.body(ResponseBody.create(MediaType.get("text/plain; charset=UTF-8"), ""));
+
+        return builder.build();
     }
 }

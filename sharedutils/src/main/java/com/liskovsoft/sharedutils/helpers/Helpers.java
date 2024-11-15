@@ -73,7 +73,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -114,7 +113,6 @@ public final class Helpers {
     public static final String SPEAKER = "\uD83D\uDD08";
     //public static final String HOURGLASS = "⌛";
     public static final String HOURGLASS = "\u231B";
-    private static DateFormat sDateFormat;
 
     /**
      * Simple wildcard matching routine. Implemented without regex. So you may expect huge performance boost.
@@ -484,6 +482,13 @@ public final class Helpers {
                 isPackageExists(context, "com.google.android.apps.tv.launcherx"); // Google TV Home
     }
 
+    public static boolean isGoogleTVLauncher(Context context) {
+        String pkgName = "com.google.android.apps.tv.launcherx";
+        //int pkgVersionCode = 413515; // 557827
+        //return isPackageExists(context, pkgName) && getPackageVersionCode(context, pkgName) >= pkgVersionCode;
+        return isPackageExists(context, pkgName);
+    }
+
     //public static boolean isAndroidTVRecommendations(Context context) {
     //    return isPackageExists(context, "com.google.android.leanbacklauncher.recommendations");
     //}
@@ -780,7 +785,19 @@ public final class Helpers {
         return pkgNames;
     }
 
-    public static boolean isPackageExists(Context context, String pkgName) {
+    private static boolean isPackageExists(Context context, String pkgName) {
+        PackageInfo packageInfo = getPackageInfo(context, pkgName);
+
+        return packageInfo != null;
+    }
+
+    private static int getPackageVersionCode(Context context, String pkgName) {
+        PackageInfo packageInfo = getPackageInfo(context, pkgName);
+        return packageInfo != null ? packageInfo.versionCode : -1;
+    }
+
+    @Nullable
+    private static PackageInfo getPackageInfo(Context context, String pkgName) {
         PackageManager manager = context.getPackageManager();
         PackageInfo packageInfo = null;
 
@@ -790,7 +807,7 @@ public final class Helpers {
             // NOP
         }
 
-        return packageInfo != null;
+        return packageInfo;
     }
 
     public static void removePackage(Context context, String pkgName) {
@@ -1306,15 +1323,15 @@ public final class Helpers {
         T parse(String spec);
     }
 
-    public static <T> List<T> parseList(String[] arr, int index, Parser<T> itemParser) {
-        return parseList(parseStr(arr, index), itemParser);
+    public static <T> List<T> parseList(String[] arr, int index, String delim, Parser<T> itemParser) {
+        return parseList(delim, parseStr(arr, index), itemParser);
     }
 
-    public static <T> List<T> parseList(String spec, Parser<T> itemParser) {
+    public static <T> List<T> parseList(String delim, String data, Parser<T> itemParser) {
         List<T> result = new ArrayList<>();
 
-        if (spec != null) {
-            String[] listArr = splitArray(spec);
+        if (data != null) {
+            String[] listArr = split(delim, data);
 
             for (String item : listArr) {
                 result.add(itemParser.parse(item));
@@ -1322,6 +1339,10 @@ public final class Helpers {
         }
 
         return result;
+    }
+
+    public static <T> List<T> parseList(String[] arr, int index, Parser<T> itemParser) {
+        return parseList(ARRAY_DELIM, parseStr(arr, index), itemParser);
     }
 
     public static <T, K> Map<T, K> parseMap(String[] arr, int index, Parser<T> keyParser, Parser<K> valueParser) {
@@ -1375,7 +1396,11 @@ public final class Helpers {
     }
 
     public static <T> String mergeList(List<T> list) {
-        return mergeArray(list.toArray());
+        return merge(ARRAY_DELIM, list.toArray());
+    }
+
+    public static <T> String mergeList(String delim, List<T> list) {
+        return merge(delim, list.toArray());
     }
 
     public static <T, K> String mergeMap(Map<T, K> map) {
@@ -1420,7 +1445,7 @@ public final class Helpers {
         return merge(OBJ_DELIM, items);
     }
 
-    private static String[] split(String delim, String data) {
+    public static String[] split(String delim, String data) {
         if (data == null) {
             return null;
         }
@@ -1433,7 +1458,7 @@ public final class Helpers {
         return data.split(Pattern.quote(delim));
     }
 
-    private static String merge(String delim, Object... params) {
+    public static String merge(String delim, Object... params) {
         if (params == null) {
             return null;
         }
@@ -1459,6 +1484,32 @@ public final class Helpers {
         }
 
         return sb.toString();
+    }
+
+    public static String combineItems(String divider, Object... items) {
+        StringBuilder result = new StringBuilder();
+
+        if (items != null) {
+            for (Object item : items) {
+                if (item == null) {
+                    continue;
+                }
+
+                String strItem = item.toString();
+
+                if (strItem == null || strItem.isEmpty()) {
+                    continue;
+                }
+
+                if (divider == null || result.length() == 0) {
+                    result.append(strItem);
+                } else {
+                    result.append(divider).append(strItem);
+                }
+            }
+        }
+
+        return result.length() != 0 ? result.toString() : null;
     }
 
     public static void openLink(Context context, String url) {
@@ -1584,7 +1635,8 @@ public final class Helpers {
         int hash = -1;
 
         for (Object item : items) {
-            if (item != null) {
+            // Don't skip zero hash because or you'll broke Home section (id == 0)
+            if (item != null && item.hashCode() != -1) {
                 hash = 31 * hash + item.hashCode();
                 break;
             }
@@ -1605,6 +1657,20 @@ public final class Helpers {
         }
 
         return true;
+    }
+
+    public static boolean anyNull(Object... items) {
+        if (items == null || items.length == 0) {
+            return false;
+        }
+
+        for (Object item : items) {
+            if (item == null) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static String decode(String urlDecoded) {
@@ -1643,7 +1709,7 @@ public final class Helpers {
     }
 
     public interface Filter<T> {
-        boolean test(T value);
+        boolean test(T item);
     }
 
     /**
@@ -1960,21 +2026,6 @@ public final class Helpers {
         return sRandom;
     }
 
-    private static DateFormat getDateFormat() {
-        if (sDateFormat == null) {
-            // https://jenkov.com/tutorials/java-internationalization/simpledateformat.html#pattern-syntax
-            sDateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault());
-            //sDateFormat = new SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale.getDefault());
-            //sDateFormat = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.getDefault());
-        }
-
-        return sDateFormat;
-    }
-
-    public static String toShortDate(long timeMs) {
-        return getDateFormat().format(new Date(timeMs));
-    }
-
     public static void enableActivity(Context context, String activityClassName, boolean enable) {
         context.getPackageManager().setComponentEnabledSetting(
                 new ComponentName(context, activityClassName),
@@ -2082,6 +2133,7 @@ public final class Helpers {
     }
 
     /**
+     * NOTE: proper item order not guaranteed!!!<br/>
      * Limit the maximum size of a Map by removing oldest entries when limit reached
      */
     public static <K, V> Map<K, V> createLRUMap(final int maxEntries) {
@@ -2097,14 +2149,18 @@ public final class Helpers {
      * Trim playlist if one exceeds max size
      */
     public static <T> List<T> createLRUList(final int maxEntries) {
-        return new LinkedList<T>() {
+        return new ArrayList<T>() {
             @Override
-            public boolean add(T t) {
-                if (size() > maxEntries) {
-                    removeFirst();
+            public boolean add(T element) {
+                if (contains(element)) {
+                    remove(element);
                 }
 
-                return super.add(t);
+                if (size() > maxEntries) {
+                    remove(0);
+                }
+
+                return super.add(element);
             }
         };
     }

@@ -97,10 +97,14 @@ public class FileHelpers {
      * @param context only Activity context is supported
      */
     public static void checkCachePermissions(Context context) {
-        File cacheDir;
+        File cacheDir = null;
 
-        // Android 6.0 fix (providers not supported)
-        cacheDir = context.getExternalCacheDir();
+        try {
+            // Android 6.0 fix (providers not supported)
+            cacheDir = context.getExternalCacheDir();
+        } catch (ArrayIndexOutOfBoundsException e) { // Fix for Hisilicon (HiDPTAndroid Hi3751V553, Android 7)
+            e.printStackTrace();
+        }
 
         if (cacheDir == null || !cacheDir.canWrite()) { // no storage, try to use internal one
             cacheDir = Environment.getExternalStorageDirectory();
@@ -226,6 +230,10 @@ public class FileHelpers {
     }
 
     public static void copy(InputStream source, File destination) {
+        if (destination.getParentFile() != null && !destination.getParentFile().exists()) {
+            destination.getParentFile().mkdirs();
+        }
+
         try {
             IOUtils.copy(source, new FileOutputStream(destination));
         } catch (IOException e) {
