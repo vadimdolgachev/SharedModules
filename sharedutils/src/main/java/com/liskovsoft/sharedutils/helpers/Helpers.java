@@ -416,6 +416,10 @@ public final class Helpers {
         return s != null && s.matches("^[-+]?\\d+$");
     }
 
+    public static boolean hasDigits(String s) {
+        return s != null && s.matches("^.*[-+]?\\d*\\.?\\d+.*$");
+    }
+
     /**
      * Force normal font size regardless of the system settings
      * @param configuration app config
@@ -590,15 +594,17 @@ public final class Helpers {
             activity.getWindow().setDecorFitsSystemWindows(false);
             WindowInsetsController controller = activity.getWindow().getInsetsController();
             // https://developer.android.com/codelabs/gesture-navigation
-            // Keep navigation bar in gesture mode to support gestures
-            if (controller != null && isEdgeToEdgeEnabled(activity) != 2) {
+            // Keep navigation bar in gesture mode to support gestures???
+            //if (controller != null && isEdgeToEdgeEnabled(activity) != 2) {
+            if (controller != null) {
                 controller.hide(WindowInsets.Type.systemBars());
                 controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
             }
         } else {
             // https://developer.android.com/codelabs/gesture-navigation
-            // Keep navigation bar in gesture mode to support gestures
-            int hideNavigation = isEdgeToEdgeEnabled(activity) != 2 ? (View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION) : 0;
+            // Keep navigation bar in gesture mode to support gestures???
+            //int hideNavigation = isEdgeToEdgeEnabled(activity) != 2 ? (View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION) : 0;
+            int hideNavigation = View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
             int sticky = Build.VERSION.SDK_INT >= 19 ? View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY : 0;
             activity.getWindow().getDecorView().setSystemUiVisibility(hideNavigation | sticky | View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_FULLSCREEN);
         }
@@ -711,8 +717,8 @@ public final class Helpers {
             return false;
         }
 
-        first = first.toLowerCase();
-        second = second.toLowerCase();
+        first = normalize(first);
+        second = normalize(second);
 
         return first.contains(second) || second.contains(first);
     }
@@ -726,8 +732,8 @@ public final class Helpers {
             return false;
         }
 
-        word = word.toLowerCase();
-        prefix = prefix.toLowerCase();
+        word = normalize(word);
+        prefix = normalize(prefix);
 
         return word.startsWith(prefix);
     }
@@ -1395,11 +1401,11 @@ public final class Helpers {
         return merge(ARRAY_DELIM, items);
     }
 
-    public static <T> String mergeList(List<T> list) {
+    public static <T> String mergeList(Collection<T> list) {
         return merge(ARRAY_DELIM, list.toArray());
     }
 
-    public static <T> String mergeList(String delim, List<T> list) {
+    public static <T> String mergeList(String delim, Collection<T> list) {
         return merge(delim, list.toArray());
     }
 
@@ -1474,8 +1480,8 @@ public final class Helpers {
                 sb.append(delim);
             }
 
-            if (param instanceof List) {
-                param = mergeList((List<?>) param);
+            if (param instanceof Collection) {
+                param = mergeList((Collection<?>) param);
             } else if (param instanceof Map) {
                 param = mergeMap((Map<?, ?>) param);
             }
@@ -2115,17 +2121,17 @@ public final class Helpers {
         return false;
     }
 
-    public static int getNextValue(int currentValue, int[] valueList) {
-        int nextState = valueList[0];
+    public static <T> T getNextValue(T currentValue, T[] valueList) {
+        T nextState = valueList[0];
         boolean found = false;
 
-        for (int state : valueList) {
+        for (T state : valueList) {
             if (found) {
                 nextState = state;
                 break;
             }
 
-            if (state == currentValue) {
+            if (state.equals(currentValue)) {
                 found = true;
             }
         }
@@ -2163,5 +2169,35 @@ public final class Helpers {
                 return super.add(element);
             }
         };
+    }
+
+    private static String normalize(String word) {
+        if (word == null || word.isEmpty()) {
+            return word;
+        }
+
+        return word.toLowerCase().replace("ё", "е");
+    }
+
+    public static String ellipsize(String str, int maxLen) {
+        return str.length() <= maxLen ? str : str.substring(0, maxLen - 3) + "...";
+    }
+
+    public static boolean isTextRTL(CharSequence text) {
+        if (text == null) {
+            return false;
+        }
+
+        // One char not enough. Rtl strings may contain couple ltr chars.
+        int len = Math.min(text.length(), 3);
+        for (int i = 0; i < len; i++) {
+            char c = text.charAt(i);
+            byte directionality = Character.getDirectionality(c);
+            if (directionality == Character.DIRECTIONALITY_RIGHT_TO_LEFT ||
+                    directionality == Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC) {
+                return true;
+            }
+        }
+        return false;
     }
 }
