@@ -2,6 +2,8 @@ package com.liskovsoft.sharedutils.prefs;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+
+import androidx.annotation.Nullable;
 import androidx.preference.PreferenceManager;
 
 import com.liskovsoft.sharedutils.mylogger.Log;
