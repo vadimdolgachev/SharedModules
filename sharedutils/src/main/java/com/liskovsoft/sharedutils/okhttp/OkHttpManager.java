@@ -1,5 +1,7 @@
 package com.liskovsoft.sharedutils.okhttp;
 
+import androidx.annotation.Nullable;
+
 import com.liskovsoft.sharedutils.mylogger.Log;
 import okhttp3.Headers;
 import okhttp3.MediaType;
@@ -8,6 +10,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -51,7 +54,7 @@ public class OkHttpManager {
         return doGetRequest(url, getClient(), headers);
     }
 
-    public Response doPostRequest(String url, Map<String, String> headers, String postBody, String contentType) {
+    public Response doPostRequest(String url, Map<String, String> headers, String postBody, @Nullable String contentType) {
         return doPostRequest(url, getClient(), headers, postBody, contentType);
     }
 
@@ -90,7 +93,7 @@ public class OkHttpManager {
         return doRequest(client, okHttpRequest);
     }
 
-    private Response doPostRequest(String url, OkHttpClient client, Map<String, String> headers, String body, String contentType) {
+    private Response doPostRequest(String url, OkHttpClient client, Map<String, String> headers, String body, @Nullable String contentType) {
         if (headers == null) {
             headers = new HashMap<>();
         }
@@ -98,7 +101,7 @@ public class OkHttpManager {
         Request okHttpRequest = new Request.Builder()
                 .url(url)
                 .headers(Headers.of(headers))
-                .post(RequestBody.create(MediaType.parse(contentType), body))
+                .post(RequestBody.create(contentType != null ? MediaType.parse(contentType) : null, body))
                 .build();
 
         return doRequest(client, okHttpRequest);
@@ -132,31 +135,40 @@ public class OkHttpManager {
         return doRequest(client, okHttpRequest);
     }
 
+    //private Response doRequest(OkHttpClient client, Request okHttpRequest) {
+    //    Response okHttpResponse = null;
+    //    Exception lastEx = null;
+    //
+    //    for (int tries = NUM_TRIES; tries > 0; tries--) {
+    //        try {
+    //            okHttpResponse = client.newCall(okHttpRequest).execute();
+    //            if (!okHttpResponse.isSuccessful()) {
+    //                throw new IllegalStateException("Unexpected code " + okHttpResponse);
+    //            }
+    //
+    //            break; // no exception is thrown - job is done
+    //        } catch (Exception ex) {
+    //            //Log.e(TAG, ex.getMessage()); // network error, just return null
+    //            okHttpResponse = null;
+    //            lastEx = ex;
+    //        }
+    //    }
+    //
+    //    if (lastEx != null && okHttpResponse == null) { // request failed
+    //        lastEx.printStackTrace();
+    //        Log.e(TAG, lastEx.getMessage());
+    //    }
+    //
+    //    return okHttpResponse;
+    //}
+
     private Response doRequest(OkHttpClient client, Request okHttpRequest) {
-        Response okHttpResponse = null;
-        Exception lastEx = null;
-
-        for (int tries = NUM_TRIES; tries > 0; tries--) {
-            try {
-                okHttpResponse = client.newCall(okHttpRequest).execute();
-                if (!okHttpResponse.isSuccessful()) {
-                    throw new IllegalStateException("Unexpected code " + okHttpResponse);
-                }
-
-                break; // no exception is thrown - job is done
-            } catch (Exception ex) {
-                //Log.e(TAG, ex.getMessage()); // network error, just return null
-                okHttpResponse = null;
-                lastEx = ex;
-            }
+        try {
+            return client.newCall(okHttpRequest).execute();
+        } catch (IOException ex) {
+            Log.e(TAG, ex.getMessage()); // network error
+            throw new IllegalStateException("Interrupted OkHttp request to " + okHttpRequest.url(), ex);
         }
-
-        if (lastEx != null && okHttpResponse == null) { // request failed
-            lastEx.printStackTrace();
-            Log.e(TAG, lastEx.getMessage());
-        }
-
-        return okHttpResponse;
     }
 
     public OkHttpClient getClient() {

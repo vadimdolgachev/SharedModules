@@ -8,6 +8,7 @@ import io.reactivex.Completable;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.Scheduler;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.exceptions.OnErrorNotImplementedException;
@@ -16,12 +17,12 @@ import io.reactivex.plugins.RxJavaPlugins;
 import io.reactivex.schedulers.Schedulers;
 
 import java.io.IOException;
-import java.net.ConnectException;
-import java.net.NoRouteToHostException;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -29,6 +30,15 @@ import java.util.concurrent.TimeUnit;
  */
 public class RxHelper {
     private static final String TAG = RxHelper.class.getSimpleName();
+    private static @Nullable Scheduler sCachedScheduler;
+
+    private static Scheduler getCachedScheduler() {
+        if (sCachedScheduler == null) {
+            sCachedScheduler = Schedulers.from(Executors.newCachedThreadPool());
+        }
+
+        return sCachedScheduler;
+    }
 
     public static void disposeActions(Disposable... actions) {
         if (actions != null) {
@@ -85,38 +95,45 @@ public class RxHelper {
         return action != null && !action.isDisposed();
     }
 
-    public static <T> Disposable execute(Observable<T> observable) {
-        return observable
-                .subscribe(
-                        obj -> {}, // ignore result
-                        error -> Log.e(TAG, "Execute error: %s", error.getMessage())
-                );
-    }
+    public static <T> Disposable execute(Observable<T> observable, @Nullable OnResult<T> onResult, @Nullable OnError onError, @Nullable Runnable onFinish) {
+        if (onResult == null) {
+            onResult = result -> {}; // ignore result
+        }
 
-    public static <T> Disposable execute(Observable<T> observable, OnError onError) {
-        return observable
-                .subscribe(
-                        obj -> {}, // ignore result
-                        onError::onError
-                );
-    }
+        if (onError == null) {
+            onError = error -> Log.e(TAG, "Execute error: %s", error.getMessage());
+        }
 
-    public static <T> Disposable execute(Observable<T> observable, Runnable onFinish) {
-        return observable
-                .subscribe(
-                        obj -> {}, // ignore result
-                        error -> Log.e(TAG, "Execute error: %s", error.getMessage()),
-                        onFinish::run
-                );
-    }
+        if (onFinish == null) {
+            onFinish = () -> {};
+        }
 
-    public static <T> Disposable execute(Observable<T> observable, OnError onError, Runnable onFinish) {
         return observable
                 .subscribe(
-                        obj -> {}, // ignore result
+                        onResult::onResult,
                         onError::onError,
                         onFinish::run
                 );
+    }
+
+    public static <T> Disposable execute(Observable<T> observable) {
+        return execute(observable, null, null, null);
+    }
+
+    public static <T> Disposable execute(Observable<T> observable, OnResult<T> onResult, OnError onError) {
+        return execute(observable, onResult, onError, null);
+    }
+
+    public static <T> Disposable execute(Observable<T> observable, OnError onError) {
+        return execute(observable, null, onError, null);
+    }
+
+    public static <T> Disposable execute(Observable<T> observable, Runnable onFinish) {
+        return execute(observable, null, null, onFinish);
+    }
+
+    public static <T> Disposable execute(Observable<T> observable, OnError onError, Runnable onFinish) {
+        return execute(observable, null, onError, onFinish);
     }
 
     public static Disposable startInterval(Runnable callback, int periodSec) {
@@ -184,6 +201,7 @@ public class RxHelper {
             }
             if ((e instanceof IllegalStateException) &&
                     ((e.getCause() instanceof SocketException) ||
+                     (e.getCause() instanceof SocketTimeoutException) ||
                      (e.getCause() instanceof UnknownHostException))) {
                 // network problems (no internet, failed to connect etc)
                 Log.e(TAG, "Network error", e.getCause());
@@ -194,6 +212,11 @@ public class RxHelper {
                 return;
             }
             if (e instanceof IOException) {
+                // fine, irrelevant network problem or API that throws on cancellation
+                return;
+            }
+            if ((e instanceof IllegalStateException) &&
+                    (e.getCause() instanceof IOException)) {
                 // fine, irrelevant network problem or API that throws on cancellation
                 return;
             }
@@ -222,11 +245,11 @@ public class RxHelper {
     }
 
     public static <T> Observable<T> create(ObservableOnSubscribe<T> source) {
-        return setup(Observable.create(source));
+        return setup(Observable.create(wrapOnSubscribe(source)));
     }
 
     public static <T> Observable<T> createLong(ObservableOnSubscribe<T> source) {
-        return setupLong(Observable.create(source));
+        return setupLong(Observable.create(wrapOnSubscribe(source)));
     }
 
     public static <T> Observable<T> fromCallable(Callable<T> supplier) {
@@ -237,7 +260,7 @@ public class RxHelper {
         return setup(Observable.fromIterable(source));
     }
 
-    public static Observable<Void> fromVoidable(Runnable callback) {
+    public static Observable<Void> fromRunnable(Runnable callback) {
         return create(emitter -> {
             callback.run();
             emitter.onComplete();
@@ -305,7 +328,7 @@ public class RxHelper {
         // NOTE: Schedulers.io() reuses blocked threads in RxJava 2
         // https://github.com/ReactiveX/RxJava/issues/6542
         return observable
-                .subscribeOn(Schedulers.io())
+                .subscribeOn(getCachedScheduler())
                 .observeOn(AndroidSchedulers.mainThread());
     }
 
@@ -320,5 +343,28 @@ public class RxHelper {
         return observable
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread());
+    }
+
+    /**
+     * Catch errors thrown after Observer is disposed.
+     * Such errors cannot be caught anywhere else.
+     */
+    private static <T> ObservableOnSubscribe<T> wrapOnSubscribe(ObservableOnSubscribe<T> source) {
+        return emitter -> {
+            try {
+                source.subscribe(emitter);
+            } catch (Exception e) {
+                // Catch errors thrown after Observer is disposed.
+                // Such errors cannot be caught anywhere else.
+                if (emitter.isDisposed()) {
+                    // InterruptedIOException - Thread interrupted. Thread died!!
+                    // UnknownHostException: Unable to resolve host (DNS error) Thread died?
+                    // Don't rethrow!!! These exceptions cannot be caught inside RxJava!!! Thread died!!!
+                    e.printStackTrace();
+                } else {
+                    throw e;
+                }
+            }
+        };
     }
 }

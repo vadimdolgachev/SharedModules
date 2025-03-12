@@ -16,6 +16,7 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.ResolveInfo;
 import android.content.res.Configuration;
 import android.content.res.Resources;
+import android.graphics.Color;
 import android.graphics.Point;
 import android.media.AudioManager;
 import android.media.MediaCodecInfo;
@@ -97,7 +98,6 @@ public final class Helpers {
     private static final String MIME_VP9 = "video/x-vnd.on2.vp9";
     private static final String MIME_AV1 = "video/av01";
     private static final Pattern URL_PREFIX = Pattern.compile("^[a-z.]+://.+$");
-    private static HashMap<String, List<String>> sCache = new HashMap<>();
     private static Boolean sIsVP9Supported;
     private static Boolean sIsAV1Supported;
     private static int sVP9MaxHeight;
@@ -414,6 +414,10 @@ public final class Helpers {
 
     public static boolean isInteger(String s) {
         return s != null && s.matches("^[-+]?\\d+$");
+    }
+
+    public static boolean hasWords(String s) {
+        return s != null && s.matches("^.*[^\\d\\W]+.*$");
     }
 
     public static boolean hasDigits(String s) {
@@ -927,7 +931,13 @@ public final class Helpers {
             return;
         }
 
-        context.runOnUiThread(() -> context.getWindow().addFlags(LayoutParams.FLAG_KEEP_SCREEN_ON));
+        context.runOnUiThread(() -> {
+            try {
+                context.getWindow().addFlags(LayoutParams.FLAG_KEEP_SCREEN_ON);
+            } catch (ArrayIndexOutOfBoundsException e) { // A rare unknown crash (length=0; index=16)
+                e.printStackTrace();
+            }
+        });
     }
 
     /**
@@ -1270,6 +1280,10 @@ public final class Helpers {
         return result != -1 ? result : defaultValue;
     }
 
+    public static long parseLong(String[] arr, int index) {
+        return parseLong(arr, index, 0);
+    }
+
     public static long parseLong(String[] arr, int index, long defaultValue) {
         if (arr == null || arr.length <= index || index < 0) {
             return defaultValue;
@@ -1279,6 +1293,7 @@ public final class Helpers {
         return result != -1 ? result : defaultValue;
     }
 
+    @Nullable
     public static String parseStr(String[] arr, int index) {
         return parseStr(arr, index, null);
     }
@@ -1304,6 +1319,10 @@ public final class Helpers {
         return parseBoolean(arr[index]);
     }
 
+    public static float parseFloat(String[] arr, int index) {
+        return parseFloat(arr, index, 0);
+    }
+
     public static float parseFloat(String[] arr, int index, float defaultValue) {
         if (arr == null || arr.length <= index || index < 0) {
             return defaultValue;
@@ -1326,7 +1345,7 @@ public final class Helpers {
     }
 
     public interface Parser<T> {
-        T parse(String spec);
+        @Nullable T parse(String spec);
     }
 
     public static <T> List<T> parseList(String[] arr, int index, String delim, Parser<T> itemParser) {
@@ -1340,7 +1359,10 @@ public final class Helpers {
             String[] listArr = split(delim, data);
 
             for (String item : listArr) {
-                result.add(itemParser.parse(item));
+                T parsed = itemParser.parse(item);
+                if (parsed != null) {
+                    result.add(parsed);
+                }
             }
         }
 
@@ -1651,12 +1673,12 @@ public final class Helpers {
         return hash != -1 ? Math.abs(hash) : -1;
     }
 
-    public static boolean allNulls(Object... items) {
-        if (items == null || items.length == 0) {
+    public static <T> boolean allNulls(List<T> items) {
+        if (items == null || items.isEmpty()) {
             return true;
         }
 
-        for (Object item : items) {
+        for (T item : items) {
             if (item != null) {
                 return false;
             }
@@ -1665,12 +1687,42 @@ public final class Helpers {
         return true;
     }
 
-    public static boolean anyNull(Object... items) {
-        if (items == null || items.length == 0) {
+    @SafeVarargs
+    public static <T> boolean allNulls(T... items) {
+        if (items == null) {
+            return true;
+        }
+
+        for (T item : items) {
+            if (item != null) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+    
+    public static <T> boolean anyNull(List<T> items) {
+        if (items == null || items.isEmpty()) {
             return false;
         }
 
-        for (Object item : items) {
+        for (T item : items) {
+            if (item == null) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    @SafeVarargs
+    public static <T> boolean anyNull(T... items) {
+        if (items == null) {
+            return false;
+        }
+
+        for (T item : items) {
             if (item == null) {
                 return true;
             }
@@ -1722,6 +1774,7 @@ public final class Helpers {
      * Predicate replacement function for devices with Android 6.0 and below.
      * @return removed items (if any) or null (if nothing removed)
      */
+    @Nullable
     public static <T> List<T> removeIf(Collection<T> collection, Filter<T> filter) {
         if (collection == null || filter == null) {
             return null;
@@ -1810,6 +1863,9 @@ public final class Helpers {
         return result;
     }
 
+    /**
+     * Fix duplicated items inside ATV channels etc.
+     */
     public static <T> void removeDuplicates(List<T> list) {
         Set<T> set = new LinkedHashSet<>(list);
         list.clear();
@@ -2199,5 +2255,26 @@ public final class Helpers {
             }
         }
         return false;
+    }
+
+    public static int invertColor(int color) {
+        // Extract RGB components from the color
+        int red = Color.red(color);
+        int green = Color.green(color);
+        int blue = Color.blue(color);
+
+        // Invert the colors by subtracting from 255
+        int invertedRed = 255 - red;
+        int invertedGreen = 255 - green;
+        int invertedBlue = 255 - blue;
+
+        // Combine the inverted colors back into a single color
+        return Color.rgb(invertedRed, invertedGreen, invertedBlue);
+    }
+
+    public static boolean isAppInForeground() {
+        ActivityManager.RunningAppProcessInfo appProcessInfo = new ActivityManager.RunningAppProcessInfo();
+        ActivityManager.getMyMemoryState(appProcessInfo);
+        return appProcessInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND;
     }
 }
