@@ -83,6 +83,7 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -460,6 +461,10 @@ public final class Helpers {
         }
 
         for (String name : nameArr) {
+            if (name == null) {
+                continue;
+            }
+
             if (fullStr.endsWith(name)) {
                 return true;
             }
@@ -1833,6 +1838,7 @@ public final class Helpers {
         return result;
     }
 
+    @Nullable
     public static <T> T findFirst(Collection<T> collection, Filter<T> filter) {
         if (collection == null || filter == null) {
             return null;
@@ -1866,10 +1872,14 @@ public final class Helpers {
     /**
      * Fix duplicated items inside ATV channels etc.
      */
-    public static <T> void removeDuplicates(List<T> list) {
-        Set<T> set = new LinkedHashSet<>(list);
-        list.clear();
-        list.addAll(set);
+    public static <T> void removeDuplicates(Collection<T> list) {
+        try {
+            Set<T> set = new LinkedHashSet<>(list);
+            list.clear();
+            list.addAll(set);
+        } catch (UnsupportedOperationException e) { // read only collection
+            e.printStackTrace();
+        }
     }
 
     public static <T> T get(Collection<T> collection, int index) {
@@ -1924,9 +1934,13 @@ public final class Helpers {
             return false;
         }
 
-        if (sVP9MaxHeight == 0) {
+        if (sVP9MaxHeight == 0) { // not initialized
             // TV capabilities sometimes are limited to the screen resolution not real decoder support
             switch (Build.MODEL) {
+                // FHD devices with fake 2K support
+                case "AFTSSS": // fire tv stick 3th gen
+                    sVP9MaxHeight = 1080;
+                    break;
                 // FHD tvs capable 4K
                 case "MiTV-AXSO0":
                 case "VIDAA_TV":
@@ -1947,7 +1961,7 @@ public final class Helpers {
             return false;
         }
 
-        if (sAV1MaxHeight == 0) {
+        if (sAV1MaxHeight == 0) { // not initialized
             sAV1MaxHeight = getCodecMaxHeight(MIME_AV1);
 
             // On Rockchip (and some others) av1 codec info is bugged.
@@ -2054,6 +2068,10 @@ public final class Helpers {
 
     public static int getRandomNumber(int min, int max) {
         return getRandom().nextInt((max - min) + 1) + min;
+    }
+
+    public static <T> T getRandomItem(T[] items) {
+        return items[Helpers.getRandomNumber(0, items.length - 1)];
     }
 
     public static <T extends Comparable<T>> T[] sortNatural(T[] stringArray) {
@@ -2212,6 +2230,26 @@ public final class Helpers {
      */
     public static <T> List<T> createLRUList(final int maxEntries) {
         return new ArrayList<T>() {
+            @Override
+            public boolean add(T element) {
+                if (contains(element)) {
+                    remove(element);
+                }
+
+                if (size() > maxEntries) {
+                    remove(0);
+                }
+
+                return super.add(element);
+            }
+        };
+    }
+
+    /**
+     * Trim playlist if one exceeds max size
+     */
+    public static <T> List<T> createSafeLRUList(final int maxEntries) {
+        return new CopyOnWriteArrayList<T>() {
             @Override
             public boolean add(T element) {
                 if (contains(element)) {
